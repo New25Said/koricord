@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>KoriChatBridge</title>
+  <style>
+    body {
+      background: #313338;
+      color: white;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    #messages {
+      height: 400px;
+      overflow-y: auto;
+      border: 1px solid #555;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    input {
+      padding: 10px;
+    }
+
+    button {
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>KoriChatBridge</h1>
+
+<div id="messages"></div>
+
+<input id="username" placeholder="Tu nombre">
+<input id="message" placeholder="Mensaje">
+<button onclick="sendMessage()">Enviar</button>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+import { getDatabase, ref, push, onChildAdded }
+from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBxJoBBnyi2NdhmddrmiTeOPK88bQxCLjI",
+  authDomain: "korichatbridge.firebaseapp.com",
+  databaseURL: "https://korichatbridge-default-rtdb.firebaseio.com",
+  projectId: "korichatbridge",
+  storageBucket: "korichatbridge.firebasestorage.app",
+  messagingSenderId: "739972909924",
+  appId: "1:739972909924:web:d594e3488feb9125364871"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+window.sendMessage = function() {
+  const username = document.getElementById("username").value;
+  const text = document.getElementById("message").value;
+
+  if (!username || !text) return;
+
+  push(ref(db, "messages"), {
+    username,
+    text,
+    time: Date.now()
+  });
+
+  document.getElementById("message").value = "";
+};
+
+onChildAdded(ref(db, "messages"), snapshot => {
+  const msg = snapshot.val();
+
+  const div = document.createElement("div");
+  div.innerHTML = `<b>${msg.username}:</b> ${msg.text}`;
+
+  document.getElementById("messages").appendChild(div);
+});
+</script>
+
+</body>
+</html>
