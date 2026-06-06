@@ -1,118 +1,95 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>KoriChatBridge</title>
-
-  <style>
-    body {
-      background: #313338;
-      color: white;
-      font-family: sans-serif;
-      margin: 0;
-      padding: 20px;
-    }
-
-    h1 {
-      margin-top: 0;
-    }
-
-    #messages {
-      height: 400px;
-      overflow-y: auto;
-      border: 1px solid #555;
-      padding: 10px;
-      margin-bottom: 10px;
-      background: #2b2d31;
-    }
-
-    input {
-      padding: 10px;
-      margin-right: 5px;
-    }
-
-    button {
-      padding: 10px;
-      cursor: pointer;
-    }
-
-    .msg {
-      margin-bottom: 8px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Korcord - Chat Privado</title>
+    <style>
+        body { margin: 0; font-family: sans-serif; background-color: #313338; color: #dbdee1; display: flex; height: 100vh; }
+        #sidebar { width: 200px; background-color: #2b2d31; padding: 20px; box-sizing: border-box; }
+        #chat-area { flex: 1; display: flex; flex-direction: column; background-color: #313338; }
+        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { background: #383a40; padding: 10px; border-radius: 8px; }
+        .user-name { font-weight: bold; color: #5865f2; margin-bottom: 4px; }
+        #input-area { padding: 20px; background-color: #313338; display: flex; gap: 10px; }
+        input, select { padding: 10px; background: #383a40; border: none; color: white; border-radius: 5px; }
+        input[type="text"] { flex: 1; }
+        button { padding: 10px 20px; background-color: #5865f2; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background-color: #4752c4; }
+    </style>
 </head>
 <body>
 
-<h1>KoriChatBridge</h1>
+    <div id="sidebar">
+        <h3>Korcord 🟢</h3>
+        <p style="font-size: 14px; color: #949ba4;">Miembros:</p>
+        <ul style="list-style: none; padding: 0;">
+            <li>👤 Said</li>
+            <li>👤 Rafa</li>
+            <li>👤 Kori</li>
+        </ul>
+    </div>
 
-<div id="messages"></div>
+    <div id="chat-area">
+        <div id="messages"></div>
+        
+        <div id="input-area">
+            <select id="user-select">
+                <option value="Said">Said</option>
+                <option value="Rafa">Rafa</option>
+                <option value="Kori">Kori</option>
+            </select>
+            <input type="text" id="message-input" placeholder="Enviar mensaje a Korcord...">
+            <button id="send-btn">Enviar</button>
+        </div>
+    </div>
 
-<input id="username" placeholder="Tu nombre">
-<input id="message" placeholder="Mensaje">
-<button onclick="sendMessage()">Enviar</button>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+        import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import {
-  getDatabase,
-  ref,
-  push,
-  onChildAdded
-} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+        const firebaseConfig = {
+          apiKey: "AIzaSyAd6JPLTRDzht6k-bL5WqSRaUAtLbsOvrk",
+          authDomain: "korcord.firebaseapp.com",
+          databaseURL: "https://korcord-default-rtdb.firebaseio.com",
+          projectId: "korcord",
+          storageBucket: "korcord.firebasestorage.app",
+          messagingSenderId: "1099244343098",
+          appId: "1:1099244343098:web:45927a34d72c0e3fc44a03",
+          measurementId: "G-MN373K4JXH"
+        };
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBxJoBBnyi2NdhmddrmiTeOPK88bQxCLjI",
-  authDomain: "korichatbridge.firebaseapp.com",
-  databaseURL: "https://korichatbridge-default-rtdb.firebaseio.com",
-  projectId: "korichatbridge",
-  storageBucket: "korichatbridge.firebasestorage.app",
-  messagingSenderId: "739972909924",
-  appId: "1:739972909924:web:d594e3488feb9125364871"
-};
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const messagesRef = ref(db, 'messages');
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+        const sendBtn = document.getElementById('send-btn');
+        const messageInput = document.getElementById('message-input');
+        const userSelect = document.getElementById('user-select');
+        const messagesDiv = document.getElementById('messages');
 
-console.log("Firebase iniciado correctamente");
+        sendBtn.addEventListener('click', () => {
+            const text = messageInput.value;
+            const user = userSelect.value;
+            
+            if(text.trim() !== "") {
+                push(messagesRef, {
+                    username: user,
+                    message: text,
+                    timestamp: Date.now()
+                });
+                messageInput.value = ""; 
+            }
+        });
 
-window.sendMessage = async function() {
-  const username = document.getElementById("username").value;
-  const text = document.getElementById("message").value;
-
-  if (!username || !text) {
-    console.log("Faltan datos");
-    return;
-  }
-
-  try {
-    await push(ref(db, "messages"), {
-      username,
-      text,
-      time: Date.now()
-    });
-
-    console.log("MENSAJE GUARDADO EN FIREBASE");
-
-    document.getElementById("message").value = "";
-  }
-  catch (err) {
-    console.error("ERROR FIREBASE:", err);
-  }
-};
-
-onChildAdded(ref(db, "messages"), snapshot => {
-  const msg = snapshot.val();
-
-  const div = document.createElement("div");
-  div.className = "msg";
-
-  div.innerHTML = `<b>${msg.username}:</b> ${msg.text}`;
-
-  document.getElementById("messages").appendChild(div);
-
-  console.log("Mensaje recibido:", msg);
-});
-</script>
-
+        onChildAdded(messagesRef, (data) => {
+            const msg = data.val();
+            const msgElement = document.createElement('div');
+            msgElement.classList.add('message');
+            msgElement.innerHTML = `<div class="user-name">${msg.username}</div><div>${msg.message}</div>`;
+            messagesDiv.appendChild(msgElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; 
+        });
+    </script>
 </body>
 </html>
