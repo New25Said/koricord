@@ -20,6 +20,7 @@
 </head>
 <body>
 
+    <!-- Barra lateral estilo Discord -->
     <div id="sidebar">
         <h3>Korcord 🟢</h3>
         <p style="font-size: 14px; color: #949ba4;">Miembros:</p>
@@ -30,6 +31,7 @@
         </ul>
     </div>
 
+    <!-- Zona del Chat -->
     <div id="chat-area">
         <div id="messages"></div>
         
@@ -37,17 +39,19 @@
             <select id="user-select">
                 <option value="Said">Said</option>
                 <option value="Rafa">Rafa</option>
-                <option value="Kori">Kori</option>
+                <option value="Kori" selected>Kori</option>
             </select>
             <input type="text" id="message-input" placeholder="Enviar mensaje a Korcord...">
             <button id="send-btn">Enviar</button>
         </div>
     </div>
 
+    <!-- Lógica de Firebase y Discord -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
         import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
+        // Configuración de tu Firebase Korcord
         const firebaseConfig = {
           apiKey: "AIzaSyAd6JPLTRDzht6k-bL5WqSRaUAtLbsOvrk",
           authDomain: "korcord.firebaseapp.com",
@@ -68,20 +72,52 @@
         const userSelect = document.getElementById('user-select');
         const messagesDiv = document.getElementById('messages');
 
-        sendBtn.addEventListener('click', () => {
+        // URL de tu Webhook Real de Discord
+        const webhookURL = "https://discord.com/api/webhooks/1512950343670038548/aNxL0FS4W90t4O7X8qQORA613nAyx2l3VyFKUNmDrI5T8uFbchiz21PAApBx8qWRIBUG";
+
+        // Función para inyectar el mensaje en el Discord Real
+        function enviarADiscord(usuario, mensaje) {
+            fetch(webhookURL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: usuario,
+                    content: mensaje
+                })
+            }).catch(err => console.error("Error enviando a Discord:", err));
+        }
+
+        // Función principal para procesar y mandar el mensaje
+        function procesarMensaje() {
             const text = messageInput.value;
             const user = userSelect.value;
             
             if(text.trim() !== "") {
+                // 1. Guardar en Firebase (para que se pinte en la web)
                 push(messagesRef, {
                     username: user,
                     message: text,
                     timestamp: Date.now()
                 });
+                
+                // 2. Mandar al canal real de Discord
+                enviarADiscord(user, text);
+
                 messageInput.value = ""; 
+            }
+        }
+
+        // Enviar al hacer clic en el botón
+        sendBtn.addEventListener('click', procesarMensaje);
+
+        // Enviar también al presionar la tecla "Enter"
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                procesarMensaje();
             }
         });
 
+        // Escuchar Firebase en vivo para pintar los mensajes en la web
         onChildAdded(messagesRef, (data) => {
             const msg = data.val();
             const msgElement = document.createElement('div');
