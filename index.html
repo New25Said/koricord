@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>KoriChatBridge</title>
+
   <style>
     body {
       background: #313338;
@@ -11,20 +13,31 @@
       padding: 20px;
     }
 
+    h1 {
+      margin-top: 0;
+    }
+
     #messages {
       height: 400px;
       overflow-y: auto;
       border: 1px solid #555;
       padding: 10px;
       margin-bottom: 10px;
+      background: #2b2d31;
     }
 
     input {
       padding: 10px;
+      margin-right: 5px;
     }
 
     button {
       padding: 10px;
+      cursor: pointer;
+    }
+
+    .msg {
+      margin-bottom: 8px;
     }
   </style>
 </head>
@@ -40,8 +53,12 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded }
-from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+import {
+  getDatabase,
+  ref,
+  push,
+  onChildAdded
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBxJoBBnyi2NdhmddrmiTeOPK88bQxCLjI",
@@ -56,28 +73,44 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-window.sendMessage = function() {
+console.log("Firebase iniciado correctamente");
+
+window.sendMessage = async function() {
   const username = document.getElementById("username").value;
   const text = document.getElementById("message").value;
 
-  if (!username || !text) return;
+  if (!username || !text) {
+    console.log("Faltan datos");
+    return;
+  }
 
-  push(ref(db, "messages"), {
-    username,
-    text,
-    time: Date.now()
-  });
+  try {
+    await push(ref(db, "messages"), {
+      username,
+      text,
+      time: Date.now()
+    });
 
-  document.getElementById("message").value = "";
+    console.log("MENSAJE GUARDADO EN FIREBASE");
+
+    document.getElementById("message").value = "";
+  }
+  catch (err) {
+    console.error("ERROR FIREBASE:", err);
+  }
 };
 
 onChildAdded(ref(db, "messages"), snapshot => {
   const msg = snapshot.val();
 
   const div = document.createElement("div");
+  div.className = "msg";
+
   div.innerHTML = `<b>${msg.username}:</b> ${msg.text}`;
 
   document.getElementById("messages").appendChild(div);
+
+  console.log("Mensaje recibido:", msg);
 });
 </script>
 
