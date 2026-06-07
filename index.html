@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Korcord Hub</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/discord.js/14.13.0/discord.min.js" integrity="sha512-..." crossorigin="anonymous" defer></script>
     <style>
         /* --- ESTILO APPLE GLASSMORPHISM (IPHONE AIR) --- */
         * {
@@ -24,7 +25,6 @@
             overflow: hidden;
         }
 
-        /* Ocupa toda la pantalla completa sin márgenes cutres */
         .glass-panel {
             background: rgba(255, 255, 255, 0.04);
             backdrop-filter: blur(30px) saturate(180%);
@@ -82,10 +82,9 @@
             font-weight: 600;
             width: 100%;
             max-width: 300px;
-            transition: transform 0.1s ease, background 0.2s;
+            transition: transform 0.1s ease;
         }
 
-        /* Animación únicamente en botones */
         .login-screen button:active {
             transform: scale(0.97);
         }
@@ -128,7 +127,6 @@
             transform: scale(0.95);
         }
 
-        /* Contenedor de mensajes puro, sin animaciones de carga */
         .messages-container {
             flex: 1;
             padding: 20px;
@@ -138,7 +136,6 @@
             gap: 12px;
         }
 
-        /* Globos estilo iOS minimalista plano */
         .msg-block {
             display: flex;
             flex-direction: column;
@@ -185,7 +182,6 @@
             text-align: right;
         }
 
-        /* Entrada de texto inferior */
         .chat-input-area {
             padding: 20px;
             display: flex;
@@ -225,22 +221,19 @@
 <body>
 
     <div class="glass-panel">
-        <!-- PANTALLA LOGIN -->
         <div id="loginScreen" class="login-screen">
             <h2>¿Eres Kori?</h2>
             <input type="password" id="passInput" placeholder="Clave secreta..." onkeypress="checkLoginEnter(event)">
             <button onclick="verificarAcceso()">Ingresar</button>
         </div>
 
-        <!-- PANTALLA PRINCIPAL DEL CHAT -->
         <div id="chatInterface" class="chat-interface">
             <div class="chat-header">
                 <h3>Chat: <span id="displayUser">Kori</span></h3>
                 <button class="logout-btn" onclick="cerrarSesion()">Cerrar Sesión</button>
             </div>
             <div class="messages-container" id="messagesContainer">
-                <!-- Se cargan en seco aquí -->
-            </div>
+                </div>
             <div class="chat-input-area">
                 <input type="text" id="msgInput" placeholder="Escribe un mensaje..." onkeypress="checkChatEnter(event)">
                 <button onclick="enviarMensaje()">Enviar</button>
@@ -249,8 +242,17 @@
     </div>
 
     <script>
+        // ==========================================
+        //         CONFIGURACIÓN DE ENLACES
+        // ==========================================
         const FIREBASE_URL = 'https://korcord-default-rtdb.firebaseio.com/messages.json';
         const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1512950343670038548/aNxL0FS4W90t4O7X8qQORA613nAyx2l3VyFKUNmDrI5T8uFbchiz21PAApBx8qWRIBUG';
+        
+        // Pega aquí el Token largo que acabas de resetear en el Developer Portal
+        const DISCORD_BOT_TOKEN = 'MTUxMjk5OTc2ODIwNzUyODAwNg.GbeLZi.doXIjE0IXXzg5U4px-zvRVREbJLb91fipc9En0';
+        
+        // Pega aquí el ID de tu canal #general (el número largo)
+        const DISCORD_CHANNEL_ID = '1512569442536521810';
 
         let usuarioActual = "Kori";
 
@@ -260,6 +262,7 @@
                 usuarioActual = sesionGuardada;
                 mostrarChat();
             }
+            inicializarBotDiscord(); // Arranca el Bot interno de la página web
         }
 
         function verificarAcceso() {
@@ -290,6 +293,7 @@
             location.reload(); 
         }
 
+        // WEB ➡️ DISCORD (Usando Webhook nativo)
         async function enviarMensaje() {
             const input = document.getElementById('msgInput');
             const texto = input.value.trim();
@@ -323,13 +327,14 @@
                     headers: { 'Content-Type': 'application/json' }
                 });
             } catch (error) {
-                console.error("Error:", error);
+                console.error("Error al enviar:", error);
             }
         }
 
         function checkLoginEnter(e) { if (e.key === 'Enter') verificarAcceso(); }
         function checkChatEnter(e) { if (e.key === 'Enter') enviarMensaje(); }
 
+        // MUESTRA MENSAJES EN LA WEB
         function cargarMensajesEnTiempoReal() {
             const container = document.getElementById('messagesContainer');
             
@@ -361,9 +366,67 @@
                     container.scrollTop = container.scrollHeight;
 
                 } catch (e) {
-                    console.error("Error:", e);
+                    console.error("Error actualizando la web:", e);
                 }
             }, 2000);
+        }
+
+        // ===================================================
+        //   EL RECEPTOR: ESCUCHA TU DISCORD Y METE A FIREBASE
+        // ===================================================
+        function inicializarBotDiscord() {
+            if (!DISCORD_BOT_TOKEN || DISCORD_BOT_TOKEN.includes("AQUÍ")) return;
+
+            // Conexión nativa de la API con los Gateways de Discord desde el cliente web
+            const ws = new WebSocket('wss://gateway.discord.gg/?v=10&encoding=json');
+            
+            ws.onopen = function() {
+                // Autenticamos el Bot con tu Token
+                const authPayload = {
+                    op: 2,
+                    d: {
+                        token: DISCORD_BOT_TOKEN,
+                        intents: 33280, // Permiso para Guilds y Message Content
+                        properties: { os: 'linux', browser: 'chrome', device: 'chrome' }
+                    }
+                };
+                ws.send(JSON.stringify(authPayload));
+            };
+
+            ws.onmessage = async function(event) {
+                const response = JSON.parse(event.data);
+                const { t, d } = response;
+
+                // Si detecta un mensaje nuevo en el canal especificado
+                if (t === 'MESSAGE_CREATE' && d.channel_id === DISCORD_CHANNEL_ID) {
+                    // Evitamos duplicar los mensajes que envía la propia web usando el webhook
+                    if (d.webhook_id) return; 
+
+                    const hora = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    
+                    const payloadFirebase = {
+                        username: d.author.username,
+                        message: d.content,
+                        timestamp: hora
+                    };
+
+                    // Guardamos lo que tú o Rafa escribieron en Discord directo a tu Firebase
+                    try {
+                        await fetch(FIREBASE_URL, {
+                            method: 'POST',
+                            body: JSON.stringify(payloadFirebase),
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                    } catch (err) {
+                        console.error("Error metiendo mensaje de Discord a Firebase:", err);
+                    }
+                }
+            };
+
+            // Mantener el bot despierto haciendo latidos (Heartbeat)
+            setInterval(() => {
+                ws.send(JSON.stringify({ op: 1, d: null }));
+            }, 40000);
         }
     </script>
 </body>
