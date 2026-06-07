@@ -1,433 +1,64 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Korcord Hub</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/discord.js/14.13.0/discord.min.js" integrity="sha512-..." crossorigin="anonymous" defer></script>
+    <title>KoriCord</title>
+
     <style>
-        /* --- ESTILO APPLE GLASSMORPHISM (IPHONE AIR) --- */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        body{
+            margin:0;
+            background:#313338;
+            color:white;
+            font-family:Arial,sans-serif;
+            display:flex;
+            height:100vh;
         }
 
-        body {
-            background: linear-gradient(135deg, #0d0b18, #1a162b, #08060f);
-            height: 100vh;
-            width: 100vw;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: #f5f5f7;
-            overflow: hidden;
+        .sidebar{
+            width:220px;
+            background:#2b2d31;
+            padding:15px;
         }
 
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.04);
-            backdrop-filter: blur(30px) saturate(180%);
-            -webkit-backdrop-filter: blur(30px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
+        .channel{
+            padding:8px;
+            color:#b5bac1;
+            cursor:pointer;
         }
 
-        /* --- PANTALLA DE LOGIN --- */
-        .login-screen {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-            padding: 20px;
+        .channel:hover{
+            background:#3f4248;
+            border-radius:5px;
         }
 
-        .login-screen h2 {
-            font-size: 32px;
-            font-weight: 300;
-            letter-spacing: -0.5px;
-            margin-bottom: 24px;
+        .chat{
+            flex:1;
+            padding:20px;
         }
 
-        .login-screen input {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 16px;
-            border-radius: 14px;
-            color: #fff;
-            font-size: 16px;
-            width: 100%;
-            max-width: 300px;
-            margin-bottom: 16px;
-            outline: none;
-            text-align: center;
-        }
-
-        .login-screen input:focus {
-            border-color: rgba(255, 255, 255, 0.4);
-        }
-
-        .login-screen button {
-            background: #ffffff;
-            color: #000000;
-            border: none;
-            padding: 16px;
-            border-radius: 14px;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: 600;
-            width: 100%;
-            max-width: 300px;
-            transition: transform 0.1s ease;
-        }
-
-        .login-screen button:active {
-            transform: scale(0.97);
-        }
-
-        /* --- INTERFAZ DEL CHAT --- */
-        .chat-interface {
-            display: none;
-            flex-direction: column;
-            height: 100%;
-            width: 100%;
-        }
-
-        .chat-header {
-            padding: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.15);
-        }
-
-        .chat-header h3 {
-            font-size: 20px;
-            font-weight: 400;
-        }
-
-        .logout-btn {
-            background: rgba(255, 69, 58, 0.15);
-            border: 1px solid rgba(255, 69, 58, 0.3);
-            color: #ff453a;
-            padding: 8px 16px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            transition: transform 0.1s ease;
-        }
-
-        .logout-btn:active {
-            transform: scale(0.95);
-        }
-
-        .messages-container {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .msg-block {
-            display: flex;
-            flex-direction: column;
-            max-width: 75%;
-            padding: 12px 16px;
-            border-radius: 16px;
-            line-height: 1.4;
-            font-size: 16px;
-        }
-
-        .msg-other {
-            background: rgba(255, 255, 255, 0.08);
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-            color: #f5f5f7;
-        }
-
-        .msg-me {
-            background: rgba(255, 255, 255, 0.2);
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-            color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .msg-user {
-            font-size: 11px;
-            font-weight: 600;
-            margin-bottom: 3px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: rgba(255, 255, 255, 0.4);
-        }
-
-        .msg-me .msg-user {
-            color: rgba(255, 255, 255, 0.7);
-            text-align: right;
-        }
-
-        .msg-time {
-            font-size: 10px;
-            color: rgba(255, 255, 255, 0.3);
-            margin-top: 5px;
-            text-align: right;
-        }
-
-        .chat-input-area {
-            padding: 20px;
-            display: flex;
-            gap: 12px;
-            background: rgba(0, 0, 0, 0.1);
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .chat-input-area input {
-            flex: 1;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 16px;
-            border-radius: 14px;
-            color: #fff;
-            outline: none;
-            font-size: 16px;
-        }
-
-        .chat-input-area button {
-            background: #ffffff;
-            color: #000000;
-            border: none;
-            padding: 0 24px;
-            border-radius: 14px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 15px;
-            transition: transform 0.1s ease;
-        }
-
-        .chat-input-area button:active {
-            transform: scale(0.95);
+        .title{
+            font-size:24px;
+            margin-bottom:20px;
         }
     </style>
 </head>
+
 <body>
 
-    <div class="glass-panel">
-        <div id="loginScreen" class="login-screen">
-            <h2>¿Eres Kori?</h2>
-            <input type="password" id="passInput" placeholder="Clave secreta..." onkeypress="checkLoginEnter(event)">
-            <button onclick="verificarAcceso()">Ingresar</button>
-        </div>
+    <div class="sidebar">
+        <h2>KoriCord</h2>
 
-        <div id="chatInterface" class="chat-interface">
-            <div class="chat-header">
-                <h3>Chat: <span id="displayUser">Kori</span></h3>
-                <button class="logout-btn" onclick="cerrarSesion()">Cerrar Sesión</button>
-            </div>
-            <div class="messages-container" id="messagesContainer">
-                </div>
-            <div class="chat-input-area">
-                <input type="text" id="msgInput" placeholder="Escribe un mensaje..." onkeypress="checkChatEnter(event)">
-                <button onclick="enviarMensaje()">Enviar</button>
-            </div>
-        </div>
+        <div class="channel"># general</div>
+        <div class="channel"># memes</div>
+        <div class="channel"># random</div>
     </div>
 
-    <script>
-        // ==========================================
-        //         CONFIGURACIÓN DE ENLACES
-        // ==========================================
-        const FIREBASE_URL = 'https://korcord-default-rtdb.firebaseio.com/messages.json';
-        const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1512950343670038548/aNxL0FS4W90t4O7X8qQORA613nAyx2l3VyFKUNmDrI5T8uFbchiz21PAApBx8qWRIBUG';
-        
-        // Pega aquí el Token largo que acabas de resetear en el Developer Portal
-        const DISCORD_BOT_TOKEN = 'MTUxMjk5OTc2ODIwNzUyODAwNg.GbeLZi.doXIjE0IXXzg5U4px-zvRVREbJLb91fipc9En0';
-        
-        // Pega aquí el ID de tu canal #general (el número largo)
-        const DISCORD_CHANNEL_ID = '1512569442536521810';
+    <div class="chat">
+        <div class="title"># general</div>
 
-        let usuarioActual = "Kori";
+        <p><b>Said:</b> Hola Kori 👋</p>
+        <p><b>Rafa:</b> XD</p>
+        <p><b>Kori:</b> Holaaa</p>
+    </div>
 
-        window.onload = function() {
-            const sesionGuardada = localStorage.getItem('sesionChat');
-            if (sesionGuardada) {
-                usuarioActual = sesionGuardada;
-                mostrarChat();
-            }
-            inicializarBotDiscord(); // Arranca el Bot interno de la página web
-        }
-
-        function verificarAcceso() {
-            const clave = document.getElementById('passInput').value.trim();
-            
-            if (clave === "soykori13") {
-                usuarioActual = "Kori";
-                localStorage.setItem('sesionChat', 'Kori'); 
-                mostrarChat();
-            } else if (clave === "offlinecheto") {
-                const nombrePersonalizado = prompt("Nombre temporal:", "Invitado");
-                usuarioActual = nombrePersonalizado ? nombrePersonalizado.trim() : "Invitado";
-                mostrarChat();
-            } else {
-                alert("Clave incorrecta.");
-            }
-        }
-
-        function mostrarChat() {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('chatInterface').style.display = 'flex';
-            document.getElementById('displayUser').innerText = usuarioActual;
-            cargarMensajesEnTiempoReal();
-        }
-
-        function cerrarSesion() {
-            localStorage.removeItem('sesionChat'); 
-            location.reload(); 
-        }
-
-        // WEB ➡️ DISCORD (Usando Webhook nativo)
-        async function enviarMensaje() {
-            const input = document.getElementById('msgInput');
-            const texto = input.value.trim();
-            if (!texto) return;
-
-            const horaActual = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-
-            const payloadFirebase = {
-                username: usuarioActual,
-                message: texto,
-                timestamp: horaActual
-            };
-
-            const payloadDiscord = {
-                username: usuarioActual,
-                content: texto
-            };
-
-            input.value = ""; 
-
-            try {
-                await fetch(FIREBASE_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payloadFirebase),
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                await fetch(DISCORD_WEBHOOK_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payloadDiscord),
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            } catch (error) {
-                console.error("Error al enviar:", error);
-            }
-        }
-
-        function checkLoginEnter(e) { if (e.key === 'Enter') verificarAcceso(); }
-        function checkChatEnter(e) { if (e.key === 'Enter') enviarMensaje(); }
-
-        // MUESTRA MENSAJES EN LA WEB
-        function cargarMensajesEnTiempoReal() {
-            const container = document.getElementById('messagesContainer');
-            
-            setInterval(async () => {
-                try {
-                    const response = await fetch(FIREBASE_URL);
-                    const data = await response.json();
-                    
-                    if (!data) return;
-                    
-                    container.innerHTML = ""; 
-                    
-                    Object.keys(data).forEach(key => {
-                        const m = data[key];
-                        const esMio = m.username === usuarioActual;
-                        
-                        const msgBlock = document.createElement('div');
-                        msgBlock.className = `msg-block ${esMio ? 'msg-me' : 'msg-other'}`;
-                        
-                        msgBlock.innerHTML = `
-                            <div class="msg-user">${m.username}</div>
-                            <div>${m.message}</div>
-                            <div class="msg-time">${m.timestamp || ''}</div>
-                        `;
-                        
-                        container.appendChild(msgBlock);
-                    });
-                    
-                    container.scrollTop = container.scrollHeight;
-
-                } catch (e) {
-                    console.error("Error actualizando la web:", e);
-                }
-            }, 2000);
-        }
-
-        // ===================================================
-        //   EL RECEPTOR: ESCUCHA TU DISCORD Y METE A FIREBASE
-        // ===================================================
-        function inicializarBotDiscord() {
-            if (!DISCORD_BOT_TOKEN || DISCORD_BOT_TOKEN.includes("AQUÍ")) return;
-
-            // Conexión nativa de la API con los Gateways de Discord desde el cliente web
-            const ws = new WebSocket('wss://gateway.discord.gg/?v=10&encoding=json');
-            
-            ws.onopen = function() {
-                // Autenticamos el Bot con tu Token
-                const authPayload = {
-                    op: 2,
-                    d: {
-                        token: DISCORD_BOT_TOKEN,
-                        intents: 33280, // Permiso para Guilds y Message Content
-                        properties: { os: 'linux', browser: 'chrome', device: 'chrome' }
-                    }
-                };
-                ws.send(JSON.stringify(authPayload));
-            };
-
-            ws.onmessage = async function(event) {
-                const response = JSON.parse(event.data);
-                const { t, d } = response;
-
-                // Si detecta un mensaje nuevo en el canal especificado
-                if (t === 'MESSAGE_CREATE' && d.channel_id === DISCORD_CHANNEL_ID) {
-                    // Evitamos duplicar los mensajes que envía la propia web usando el webhook
-                    if (d.webhook_id) return; 
-
-                    const hora = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    
-                    const payloadFirebase = {
-                        username: d.author.username,
-                        message: d.content,
-                        timestamp: hora
-                    };
-
-                    // Guardamos lo que tú o Rafa escribieron en Discord directo a tu Firebase
-                    try {
-                        await fetch(FIREBASE_URL, {
-                            method: 'POST',
-                            body: JSON.stringify(payloadFirebase),
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-                    } catch (err) {
-                        console.error("Error metiendo mensaje de Discord a Firebase:", err);
-                    }
-                }
-            };
-
-            // Mantener el bot despierto haciendo latidos (Heartbeat)
-            setInterval(() => {
-                ws.send(JSON.stringify({ op: 1, d: null }));
-            }, 40000);
-        }
-    </script>
 </body>
 </html>
