@@ -3,129 +3,425 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Korcord - Chat Privado</title>
+    <title>Korcord Hub</title>
     <style>
-        body { margin: 0; font-family: sans-serif; background-color: #313338; color: #dbdee1; display: flex; height: 100vh; }
-        #sidebar { width: 200px; background-color: #2b2d31; padding: 20px; box-sizing: border-box; }
-        #chat-area { flex: 1; display: flex; flex-direction: column; background-color: #313338; }
-        #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .message { background: #383a40; padding: 10px; border-radius: 8px; }
-        .user-name { font-weight: bold; color: #5865f2; margin-bottom: 4px; }
-        #input-area { padding: 20px; background-color: #313338; display: flex; gap: 10px; }
-        input, select { padding: 10px; background: #383a40; border: none; color: white; border-radius: 5px; }
-        input[type="text"] { flex: 1; }
-        button { padding: 10px 20px; background-color: #5865f2; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        button:hover { background-color: #4752c4; }
+        /* --- ESTILOS DISCORD MINIMALISTA & AERO GLASS --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f0c1b, #1e1a3a, #0b0914);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #b9bbbe;
+            overflow: hidden;
+        }
+
+        /* Contenedor Efecto Cristal Esmerilado (Aero Glass) */
+        .glass-panel {
+            background: rgba(40, 43, 48, 0.55);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+            width: 92%;
+            max-width: 850px;
+            height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- PANTALLA DE LOGIN --- */
+        .login-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .login-screen h2 {
+            color: #ffffff;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 28px;
+        }
+
+        .login-screen p {
+            color: #72767d;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+
+        .login-screen input {
+            background: rgba(30, 32, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 14px 20px;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 16px;
+            width: 100%;
+            max-width: 320px;
+            margin-bottom: 16px;
+            outline: none;
+            text-align: center;
+            transition: border 0.2s;
+        }
+
+        .login-screen input:focus {
+            border-color: #5865F2;
+        }
+
+        .login-screen button {
+            background: #5865F2;
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s, transform 0.1s;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .login-screen button:hover {
+            background: #4752C4;
+        }
+
+        .login-screen button:active {
+            transform: scale(0.98);
+        }
+
+        /* --- INTERFAZ DEL CHAT --- */
+        .chat-interface {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* Encabezado Superior */
+        .chat-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(32, 34, 37, 0.3);
+        }
+
+        .chat-header h3 {
+            color: #fff;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-header h3::before {
+            content: "#";
+            color: #72767d;
+            font-size: 22px;
+            font-weight: 400;
+        }
+
+        .logout-btn {
+            background: rgba(240, 71, 71, 0.1);
+            border: 1px solid rgba(240, 71, 71, 0.5);
+            color: #f04747;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: #f04747;
+            color: #fff;
+        }
+
+        /* Contenedor de Globos de Texto */
+        .messages-container {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            background: rgba(44, 47, 51, 0.1);
+        }
+
+        /* Estructura Base del Globo */
+        .msg-block {
+            display: flex;
+            flex-direction: column;
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 14px;
+            line-height: 1.5;
+            font-size: 15px;
+            animation: popIn 0.2s ease-out;
+        }
+
+        @keyframes popIn {
+            from { transform: translateY(8px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Mensajes Recibidos */
+        .msg-other {
+            background: rgba(64, 68, 75, 0.5);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            color: #dcddde;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        /* Mensajes Enviados por ti en la web */
+        .msg-me {
+            background: rgba(88, 101, 242, 0.25);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+            color: #ffffff;
+            border: 1px solid rgba(88, 101, 242, 0.35);
+        }
+
+        .msg-user {
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: #43b581;
+        }
+
+        .msg-me .msg-user {
+            color: #00aff4;
+            text-align: right;
+        }
+
+        .msg-time {
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.25);
+            margin-top: 6px;
+            text-align: right;
+        }
+
+        /* Barra Inferior de Escritura */
+        .chat-input-area {
+            padding: 24px;
+            display: flex;
+            gap: 12px;
+            background: rgba(32, 34, 37, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            background: rgba(64, 68, 75, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 16px;
+            border-radius: 10px;
+            color: #fff;
+            outline: none;
+            font-size: 15px;
+            transition: background 0.2s;
+        }
+
+        .chat-input-area input:focus {
+            background: rgba(64, 68, 75, 0.6);
+        }
+
+        .chat-input-area button {
+            background: #5865F2;
+            color: #fff;
+            border: none;
+            padding: 0 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            transition: background 0.2s;
+        }
+
+        .chat-input-area button:hover {
+            background: #4752C4;
+        }
     </style>
 </head>
 <body>
 
-    <!-- Barra lateral estilo Discord -->
-    <div id="sidebar">
-        <h3>Korcord 🟢</h3>
-        <p style="font-size: 14px; color: #949ba4;">Miembros:</p>
-        <ul style="list-style: none; padding: 0;">
-            <li>👤 Said</li>
-            <li>👤 Rafa</li>
-            <li>👤 Kori</li>
-        </ul>
-    </div>
+    <div class="glass-panel">
+        <!-- PANTALLA LOGIN -->
+        <div id="loginScreen" class="login-screen">
+            <h2>¿Eres Kori?</h2>
+            <p>Introduce tus credenciales para acceder al servidor de chat</p>
+            <input type="password" id="passInput" placeholder="Escribe la clave secreta..." onkeypress="checkLoginEnter(event)">
+            <button onclick="verificarAcceso()">Ingresar</button>
+        </div>
 
-    <!-- Zona del Chat -->
-    <div id="chat-area">
-        <div id="messages"></div>
-        
-        <div id="input-area">
-            <select id="user-select">
-                <option value="Said">Said</option>
-                <option value="Rafa">Rafa</option>
-                <option value="Kori" selected>Kori</option>
-            </select>
-            <input type="text" id="message-input" placeholder="Enviar mensaje a Korcord...">
-            <button id="send-btn">Enviar</button>
+        <!-- PANTALLA PRINCIPAL DEL CHAT -->
+        <div id="chatInterface" class="chat-interface">
+            <div class="chat-header">
+                <h3>Canal-De-<span id="displayUser">Kori</span></h3>
+                <button class="logout-btn" onclick="cerrarSesion()">Cerrar Sesión</button>
+            </div>
+            <div class="messages-container" id="messagesContainer">
+                <!-- Los globos de texto se cargan dinámicamente aquí -->
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="msgInput" placeholder="Enviar mensaje..." onkeypress="checkChatEnter(event)">
+                <button onclick="enviarMensaje()">Enviar</button>
+            </div>
         </div>
     </div>
 
-    <!-- Lógica de Firebase y Discord -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-        import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+    <script>
+        // ==========================================
+        //         CONFIGURACIÓN DE ENLACES
+        // ==========================================
+        const FIREBASE_URL = 'https://korcord-default-rtdb.firebaseio.com/messages.json';
+        const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1512950343670038548/aNxL0FS4W90t4O7X8qQORA613nAyx2l3VyFKUNmDrI5T8uFbchiz21PAApBx8qWRIBUG';
 
-        // Configuración de tu Firebase Korcord
-        const firebaseConfig = {
-          apiKey: "AIzaSyAd6JPLTRDzht6k-bL5WqSRaUAtLbsOvrk",
-          authDomain: "korcord.firebaseapp.com",
-          databaseURL: "https://korcord-default-rtdb.firebaseio.com",
-          projectId: "korcord",
-          storageBucket: "korcord.firebasestorage.app",
-          messagingSenderId: "1099244343098",
-          appId: "1:1099244343098:web:45927a34d72c0e3fc44a03",
-          measurementId: "G-MN373K4JXH"
-        };
+        let usuarioActual = "Kori";
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-        const messagesRef = ref(db, 'messages');
-
-        const sendBtn = document.getElementById('send-btn');
-        const messageInput = document.getElementById('message-input');
-        const userSelect = document.getElementById('user-select');
-        const messagesDiv = document.getElementById('messages');
-
-        // URL de tu Webhook Real de Discord
-        const webhookURL = "https://discord.com/api/webhooks/1512950343670038548/aNxL0FS4W90t4O7X8qQORA613nAyx2l3VyFKUNmDrI5T8uFbchiz21PAApBx8qWRIBUG";
-
-        // Función para inyectar el mensaje en el Discord Real
-        function enviarADiscord(usuario, mensaje) {
-            fetch(webhookURL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: usuario,
-                    content: mensaje
-                })
-            }).catch(err => console.error("Error enviando a Discord:", err));
+        // Comprobación automática de sesión persistente al abrir la web
+        window.onload = function() {
+            const sesionGuardada = localStorage.getItem('sesionChat');
+            if (sesionGuardada) {
+                usuarioActual = sesionGuardada;
+                mostrarChat();
+            }
         }
 
-        // Función principal para procesar y mandar el mensaje
-        function procesarMensaje() {
-            const text = messageInput.value;
-            const user = userSelect.value;
+        // Sistema de verificación de contraseñas
+        function verificarAcceso() {
+            const clave = document.getElementById('passInput').value.trim();
             
-            if(text.trim() !== "") {
-                // 1. Guardar en Firebase (para que se pinte en la web)
-                push(messagesRef, {
-                    username: user,
-                    message: text,
-                    timestamp: Date.now()
-                });
-                
-                // 2. Mandar al canal real de Discord
-                enviarADiscord(user, text);
-
-                messageInput.value = ""; 
+            if (clave === "soykori13") {
+                usuarioActual = "Kori";
+                localStorage.setItem('sesionChat', 'Kori'); // Guardado permanente
+                mostrarChat();
+            } else if (clave === "offlinecheto") {
+                const nombrePersonalizado = prompt("Introduce tu nombre personalizado (Temporal):", "Invitado");
+                usuarioActual = nombrePersonalizado ? nombrePersonalizado.trim() : "Invitado";
+                mostrarChat();
+            } else {
+                alert("Clave incorrecta. Acceso denegado.");
             }
         }
 
-        // Enviar al hacer clic en el botón
-        sendBtn.addEventListener('click', procesarMensaje);
+        function mostrarChat() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('chatInterface').style.display = 'flex';
+            document.getElementById('displayUser').innerText = usuarioActual;
+            cargarMensajesEnTiempoReal();
+        }
 
-        // Enviar también al presionar la tecla "Enter"
-        messageInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                procesarMensaje();
+        function cerrarSesion() {
+            localStorage.removeItem('sesionChat'); // Borra la persistencia de Kori
+            location.reload(); 
+        }
+
+        // ==========================================
+        //       ACCIONES DE ENVÍO (WEB ➡️ DISCORD/FIREBASE)
+        // ==========================================
+        async function enviarMensaje() {
+            const input = document.getElementById('msgInput');
+            const texto = input.value.trim();
+            if (!texto) return;
+
+            const horaActual = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+            // 1. Estructura para Firebase
+            const payloadFirebase = {
+                username: usuarioActual,
+                message: texto,
+                timestamp: horaActual
+            };
+
+            // 2. Estructura para Discord
+            const payloadDiscord = {
+                username: usuarioActual,
+                content: texto
+            };
+
+            input.value = ""; // Limpieza rápida de la barra de texto
+
+            try {
+                // Enviar directo a Firebase
+                await fetch(FIREBASE_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payloadFirebase),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                // Enviar directo a Discord
+                await fetch(DISCORD_WEBHOOK_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payloadDiscord),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            } catch (error) {
+                console.error("Error al enviar el mensaje:", error);
             }
-        });
+        }
 
-        // Escuchar Firebase en vivo para pintar los mensajes en la web
-        onChildAdded(messagesRef, (data) => {
-            const msg = data.val();
-            const msgElement = document.createElement('div');
-            msgElement.classList.add('message');
-            msgElement.innerHTML = `<div class="user-name">${msg.username}</div><div>${msg.message}</div>`;
-            messagesDiv.appendChild(msgElement);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight; 
-        });
+        function checkLoginEnter(e) { if (e.key === 'Enter') verificarAcceso(); }
+        function checkChatEnter(e) { if (e.key === 'Enter') enviarMensaje(); }
+
+        // ==========================================
+        //     ACCIONES DE RECEPCIÓN (FIREBASE ➡️ WEB)
+        // ==========================================
+        function cargarMensajesEnTiempoReal() {
+            const container = document.getElementById('messagesContainer');
+            
+            setInterval(async () => {
+                try {
+                    const response = await fetch(FIREBASE_URL);
+                    const data = await response.json();
+                    
+                    if (!data) {
+                        container.innerHTML = `<div style="text-align:center;color:#72767d;margin-top:20px;">No hay mensajes en el canal.</div>`;
+                        return;
+                    }
+                    
+                    container.innerHTML = ""; 
+                    
+                    Object.keys(data).forEach(key => {
+                        const m = data[key];
+                        const esMio = m.username === usuarioActual;
+                        
+                        const msgBlock = document.createElement('div');
+                        msgBlock.className = `msg-block ${esMio ? 'msg-me' : 'msg-other'}`;
+                        
+                        msgBlock.innerHTML = `
+                            <div class="msg-user">${m.username}</div>
+                            <div>${m.message}</div>
+                            <div class="msg-time">${m.timestamp || ''}</div>
+                        `;
+                        
+                        container.appendChild(msgBlock);
+                    });
+                    
+                    container.scrollTop = container.scrollHeight;
+
+                } catch (e) {
+                    console.error("Error al sincronizar mensajes:", e);
+                }
+            }, 2000);
+        }
     </script>
 </body>
 </html>
