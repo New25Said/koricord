@@ -201,6 +201,45 @@ document.getElementById("msg").addEventListener("keydown", (e) => {
   if (e.key === "Enter") sendMessage();
 });
 
+
+
+
+
+
+
+
+
+
+  onChildAdded(ref(db,"webMessages"), (snap) => {
+
+const data = snap.val();
+
+const div = document.createElement("div");
+div.className = "msg";
+
+const time = new Date(data.time)
+.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+/* 💡 mensaje propio (sin prefix, limpio como querías) */
+div.innerHTML = `
+<div class="avatar">${"U"}</div>
+
+<div class="content">
+  <div class="top">
+    <span class="name">Tú</span>
+    <span class="time">${time}</span>
+  </div>
+  <div class="text">${data.text}</div>
+</div>
+`;
+
+document.getElementById("messages").appendChild(div);
+
+document.getElementById("messages").scrollTop =
+document.getElementById("messages").scrollHeight;
+
+});
+
 </script>
 
 </body>
