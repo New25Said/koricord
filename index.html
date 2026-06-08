@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -35,15 +34,27 @@ padding:20px;
 
 .input{
 padding:15px;
+display:flex;
+gap:10px;
+background:#2b2d31;
 }
 
 input{
-width:80%;
+flex:1;
 padding:10px;
+border:none;
+border-radius:6px;
+background:#1e1f22;
+color:white;
 }
 
 button{
 padding:10px;
+border:none;
+border-radius:6px;
+background:#5865f2;
+color:white;
+cursor:pointer;
 }
 </style>
 </head>
@@ -51,8 +62,10 @@ padding:10px;
 <body>
 
 <div class="sidebar">
-<h2>KoriCord</h2>
+<h2>💜 KoriCord</h2>
 <div># general</div>
+<div>🌐 Web → Discord</div>
+<div>🤖 Bot activo</div>
 </div>
 
 <div class="chat">
@@ -60,7 +73,7 @@ padding:10px;
 <div id="messages" class="messages"></div>
 
 <div class="input">
-<input id="msg" placeholder="Mensaje">
+<input id="msg" placeholder="Escribe a Discord...">
 <button onclick="sendMessage()">Enviar</button>
 </div>
 
@@ -76,6 +89,7 @@ push,
 onChildAdded
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
+/* 🔥 FIREBASE */
 const firebaseConfig = {
 apiKey: "AIzaSyARq5j8Kf9p4SYj4sj3167BjVD-Q4KczQE",
 authDomain: "koricord-a5f4e.firebaseapp.com",
@@ -89,48 +103,44 @@ appId: "1:228519016518:web:9062449c2b5135ee36b247"
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+/* 🌐 WEB → FIREBASE (PUENTE) */
 window.sendMessage = async function(){
 
-const text =
-document.getElementById("msg").value;
-
+const text = document.getElementById("msg").value;
 if(!text) return;
 
-await push(
-ref(db,"messages"),
-{
-user:"Kori",
-text:text,
-time:Date.now()
-}
-);
+await push(ref(db,"webMessages"), {
+user: "KoriWeb",
+text: text,
+time: Date.now()
+});
 
-document.getElementById("msg").value="";
+document.getElementById("msg").value = "";
 };
 
-onChildAdded(
-ref(db,"messages"),
-(snapshot)=>{
+/* 💬 DISCORD → WEB (LIVE VIEW) */
+onChildAdded(ref(db,"discordMessages"), (snapshot) => {
 
 const data = snapshot.val();
 
-const div =
-document.createElement("div");
+const div = document.createElement("div");
+div.style.padding = "8px";
+div.style.background = "#2b2d31";
+div.style.marginBottom = "8px";
+div.style.borderRadius = "8px";
 
-div.innerHTML =
-"<b>"+data.user+
-":</b> "+
-data.text;
+div.innerHTML = `
+<b>${data.user} [${data.server}]</b><br>
+${data.text}
+`;
 
-document
-.getElementById("messages")
-.appendChild(div);
+document.getElementById("messages").appendChild(div);
 
-}
-);
+document.getElementById("messages").scrollTop =
+document.getElementById("messages").scrollHeight;
+});
 
 </script>
 
 </body>
 </html>
-```
