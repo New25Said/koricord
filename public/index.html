@@ -113,9 +113,9 @@ cursor:pointer;
 <body>
 
 <div class="sidebar">
-<h2>💜 KoriCord</h2>
-<div># general</div>
-<div>🌐 Web ↔ Discord</div>
+<h2>KoriCord</h2>
+<div>2PyM</div>
+<div>🌐 Web ↔ Discord :D</div>
 </div>
 
 <div class="chat">
@@ -139,7 +139,6 @@ push,
 onChildAdded
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
-/* 🔥 FIREBASE */
 const firebaseConfig = {
 apiKey: "AIzaSyARq5j8Kf9p4SYj4sj3167BjVD-Q4KczQE",
 authDomain: "koricord-a5f4e.firebaseapp.com",
@@ -153,16 +152,15 @@ appId: "1:228519016518:web:9062449c2b5135ee36b247"
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* 🌐 WEB → FIREBASE */
+/* 🌐 ENVIAR A FIREBASE (SIN USER PREFIX) */
 window.sendMessage = async function(){
 
 const text = document.getElementById("msg").value;
 if(!text) return;
 
 await push(ref(db,"webMessages"), {
-user:"KoriWeb",
-text:text,
-time:Date.now()
+text: text,
+time: Date.now()
 });
 
 document.getElementById("msg").value="";
@@ -196,6 +194,11 @@ document.getElementById("messages").appendChild(div);
 document.getElementById("messages").scrollTop =
 document.getElementById("messages").scrollHeight;
 
+});
+
+/* 💬 ENTER PARA ENVIAR */
+document.getElementById("msg").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendMessage();
 });
 
 </script>
