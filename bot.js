@@ -1,5 +1,4 @@
 import { Client, GatewayIntentBits } from "discord.js";
-import http from "http";
 import express from "express";
 import admin from "firebase-admin";
 
@@ -15,23 +14,17 @@ admin.initializeApp({
 
 const db = admin.database();
 
-/* 🌐 WEB SERVER (Render hosting del HTML) */
-const appWeb = express();
-appWeb.use(express.static("public"));
+/* 🌐 EXPRESS (WEB SERVER) */
+const app = express();
+const PORT = process.env.PORT;
 
-const PORT = process.env.PORT || 10000;
+app.use(express.static("public"));
 
-appWeb.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log("🌐 Web corriendo en Render");
 });
 
-/* 🔄 Keep alive */
-http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end("KoriBot vivo");
-}).listen(PORT);
-
-/* 🤖 DISCORD */
+/* 🤖 DISCORD BOT */
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -65,9 +58,7 @@ db.ref("webMessages").on("child_added", async (snap) => {
   const channel = channels.find(c => c.isTextBased());
 
   if (channel) {
-    await channel.send(
-      `💬 ${data.user}: ${data.text}`
-    );
+    await channel.send(`💬 ${data.user}: ${data.text}`);
   }
 });
 
