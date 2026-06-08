@@ -1,0 +1,13 @@
+{
+  "name": "koricordbot",
+  "version": "1.0.0",
+  "main": "bot.js",
+  "type": "module",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.21.0",
+    "firebase-admin": "^13.0.2"
+  }
+}
