@@ -1,5 +1,6 @@
 import { Client, GatewayIntentBits } from "discord.js";
 import http from "http";
+import express from "express";
 import admin from "firebase-admin";
 
 /* 🔐 FIREBASE */
@@ -14,15 +15,23 @@ admin.initializeApp({
 
 const db = admin.database();
 
-/* 🌐 KEEP ALIVE (Render / hosting) */
+/* 🌐 WEB SERVER (Render hosting del HTML) */
+const appWeb = express();
+appWeb.use(express.static("public"));
+
 const PORT = process.env.PORT || 10000;
 
+appWeb.listen(PORT, () => {
+  console.log("🌐 Web corriendo en Render");
+});
+
+/* 🔄 Keep alive */
 http.createServer((req, res) => {
   res.writeHead(200);
   res.end("KoriBot vivo");
 }).listen(PORT);
 
-/* 🤖 DISCORD BOT */
+/* 🤖 DISCORD */
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -32,16 +41,12 @@ const client = new Client({
 });
 
 client.once("ready", () => {
-  console.log(`Conectado como ${client.user.tag}`);
+  console.log(`🤖 Conectado como ${client.user.tag}`);
 });
 
 /* 💬 DISCORD → FIREBASE */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
-
-  console.log(
-    `[${message.guild?.name}] ${message.author.username}: ${message.content}`
-  );
 
   await db.ref("discordMessages").push({
     user: message.author.username,
@@ -51,21 +56,17 @@ client.on("messageCreate", async (message) => {
   });
 });
 
-/* 🌐 WEB → DISCORD (PUENTE) */
-const webRef = db.ref("webMessages");
-
-webRef.on("child_added", async (snapshot) => {
-  const data = snapshot.val();
+/* 🌐 WEB → DISCORD */
+db.ref("webMessages").on("child_added", async (snap) => {
+  const data = snap.val();
   if (!data?.text) return;
-
-  console.log("Mensaje desde web:", data.text);
 
   const channels = client.channels.cache;
   const channel = channels.find(c => c.isTextBased());
 
   if (channel) {
     await channel.send(
-      `🌐 Web: ${data.user}\n💬 ${data.text}`
+      `💬 ${data.user}: ${data.text}`
     );
   }
 });
