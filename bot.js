@@ -14,14 +14,14 @@ admin.initializeApp({
 
 const db = admin.database();
 
-/* 🌐 EXPRESS (WEB SERVER) */
+/* 🌐 WEB SERVER */
 const app = express();
 const PORT = process.env.PORT;
 
 app.use(express.static("public"));
 
 app.listen(PORT, () => {
-  console.log("🌐 Web corriendo en Render");
+  console.log("🌐 Web activa en Render");
 });
 
 /* 🤖 DISCORD BOT */
@@ -34,7 +34,7 @@ const client = new Client({
 });
 
 client.once("ready", () => {
-  console.log(`🤖 Conectado como ${client.user.tag}`);
+  console.log(`🤖 Logueado como ${client.user.tag}`);
 });
 
 /* 💬 DISCORD → FIREBASE */
@@ -58,7 +58,7 @@ db.ref("webMessages").on("child_added", async (snap) => {
   const channel = channels.find(c => c.isTextBased());
 
   if (channel) {
-    await channel.send(`💬 ${data.user}: ${data.text}`);
+    await channel.send(data.text); // 💥 SIN PREFIJOS
   }
 });
 
