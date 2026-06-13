@@ -51,84 +51,110 @@ button{background:#5865f2;color:white;cursor:pointer}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import {
-getDatabase, ref, push, onChildAdded, set, remove, onValue
+getDatabase,
+ref,
+push,
+onChildAdded,
+set,
+remove,
+onValue
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
-const app = initializeApp({
-apiKey:"AIzaSyA...",
-authDomain:"koricord-a5f4e.firebaseapp.com",
-databaseURL:"https://koricord-a5f4e-default-rtdb.firebaseio.com",
-projectId:"koricord-a5f4e",
-storageBucket:"koricord-a5f4e.appspot.com",
-messagingSenderId:"228519016518",
-appId:"1:228519016518:web:9062449c2b5135ee36b247"
-});
-
+const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* LOGIN */
-window.login = () => {
-if(document.getElementById("pass").value==="soykori"){
-document.getElementById("login").style.display="none";
-}else{
-document.getElementById("err").innerText="solo Kori";
-}
-};
+/* 🔐 SEND */
+window.sendMessage = async function () {
+const text = document.getElementById("msg").value;
+if (!text) return;
 
-/* SEND */
-window.send = async () => {
-const text = msg.value;
-if(!text) return;
-
-await push(ref(db,"messages"), {
-source:"web",
-sender:"Kori",
+await push(ref(db, "messages"), {
+source: "web",
+sender: "Kori",
 text,
-timestamp:Date.now()
+timestamp: Date.now()
 });
 
-msg.value="";
+document.getElementById("msg").value = "";
 };
 
-/* LOAD */
-const list = [];
+/* 🧠 UNA SOLA LISTA (FIX DESORDEN) */
+const messagesList = [];
 
-onChildAdded(ref(db,"messages"), (s)=>{
-list.push(s.val());
+function render() {
+const box = document.getElementById("messages");
+box.innerHTML = "";
+
+messagesList
+.sort((a, b) => a.timestamp - b.timestamp)
+.forEach(data => {
+
+const div = document.createElement("div");
+div.className = "msg";
+
+const time = new Date(data.timestamp)
+.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+div.innerHTML = `
+${
+data.avatar
+? `<img class="avatar" src="${data.avatar}">`
+: `<div class="avatar">${(data.sender || "?")[0]}</div>`
+}
+
+<div class="content">
+<div class="top">
+<span class="name">${data.sender}</span>
+<span class="time">${time}</span>
+</div>
+<div class="text">${data.text}</div>
+</div>
+`;
+
+box.appendChild(div);
+});
+}
+
+/* 🔥 LOAD MESSAGES */
+onChildAdded(ref(db, "messages"), (snap) => {
+messagesList.push(snap.val());
 render();
 });
 
-function render(){
-messages.innerHTML="";
-list.sort((a,b)=>a.timestamp-b.timestamp)
-.forEach(m=>{
-const div=document.createElement("div");
-div.className="msg";
+/* ✍️ TYPING REAL (KORI + WEB) */
+let typingTimeout;
 
-const time=new Date(m.timestamp).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+document.getElementById("msg").addEventListener("input", () => {
 
-div.innerHTML=`
-<div class="avatar">${(m.sender||"?")[0]}</div>
-<div class="content">
-<div class="top">
-<div class="name">${m.sender}</div>
-<div class="time">${time}</div>
-</div>
-<div class="text">${m.text}</div>
-</div>`;
-messages.appendChild(div);
+set(ref(db, "typing/web"), {
+name: "Web",
+time: Date.now()
 });
+
+clearTimeout(typingTimeout);
+
+typingTimeout = setTimeout(() => {
+remove(ref(db, "typing/web"));
+}, 1000);
+});
+
+/* 👀 SHOW TYPING */
+onValue(ref(db, "typing"), (snap) => {
+const data = snap.val();
+
+if (!data) {
+document.getElementById("typing").innerText = "";
+return;
 }
 
-/* TYPING REAL */
-window.onkeydown=()=>{
-set(ref(db,"typing/kori"),{name:"Kori"});
-setTimeout(()=>remove(ref(db,"typing/kori")),1000);
-};
+const users = Object.values(data);
+document.getElementById("typing").innerText =
+users.map(u => `${u.name} está escribiendo...`).join(", ");
+});
 
-onValue(ref(db,"typing"), snap=>{
-const v=snap.val();
-typing.innerText=v ? "alguien escribiendo..." : "";
+/* ENTER */
+document.getElementById("msg").addEventListener("keydown", (e) => {
+if (e.key === "Enter") sendMessage();
 });
 </script>
 
