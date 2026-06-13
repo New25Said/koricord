@@ -1,62 +1,53 @@
-import { Client, GatewayIntentBits } from "discord.js";
-import express from "express";
-import admin from "firebase-admin";
+import{Client,GatewayIntentBits}from"discord.js";
+import express from"express";
+import admin from"firebase-admin";
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+const serviceAccount=JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://koricord-a5f4e-default-rtdb.firebaseio.com"
+credential:admin.credential.cert(serviceAccount),
+databaseURL:"https://koricord-a5f4e-default-rtdb.firebaseio.com"
 });
 
-const db = admin.database();
+const db=admin.database();
 
-/* WEB */
-const app = express();
-const PORT = process.env.PORT || 3000;
-
+const app=express();
 app.use(express.static("public"));
-app.listen(PORT);
+app.listen(process.env.PORT||3000);
 
-/* DISCORD */
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ]
+const client=new Client({
+intents:[
+GatewayIntentBits.Guilds,
+GatewayIntentBits.GuildMessages,
+GatewayIntentBits.MessageContent
+]
 });
 
-client.once("ready", () => {
-  console.log("BOT LISTO");
+client.once("ready",()=>console.log("BOT OK"));
+
+/* DISCORD -> FIREBASE */
+client.on("messageCreate",async m=>{
+if(m.author.bot)return;
+
+const sticker=m.stickers.first();
+
+db.ref("messages").push({
+source:"discord",
+sender:m.member?.displayName||m.author.username,
+username:m.author.username,
+avatar:m.author.displayAvatarURL({dynamic:true,size:128}),
+text:m.content||(sticker?`🎟️${sticker.name}`:""),
+timestamp:Date.now()
+});
 });
 
-/* DISCORD → FIREBASE (UNIFICADO) */
-client.on("messageCreate", async (message) => {
-  if (message.author.bot) return;
+/* WEB -> DISCORD */
+db.ref("messages").on("child_added",async s=>{
+const d=s.val();
+if(!d||d.source!=="web")return;
 
-  const sticker = message.stickers.first();
-
-  await db.ref("messages").push({
-    source: "discord",
-    sender: message.member?.displayName || message.author.username,
-    username: message.author.username,
-    avatar: message.author.displayAvatarURL({
-      dynamic: true,
-      size: 128
-    }),
-    text: message.content || (sticker ? `🎟️ ${sticker.name}` : ""),
-    timestamp: Date.now()
-  });
-});
-
-/* WEB → DISCORD */
-db.ref("messages").on("child_added", async (snap) => {
-  const data = snap.val();
-  if (!data || data.source !== "web") return;
-
-  const channel = client.channels.cache.find(c => c.isTextBased());
-  if (channel) channel.send(data.text);
+const c=client.channels.cache.find(x=>x.isTextBased());
+if(c)c.send(d.text);
 });
 
 client.login(process.env.DISCORD_TOKEN);
