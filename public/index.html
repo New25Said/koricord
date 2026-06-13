@@ -90,18 +90,18 @@ color:#a1a1a1;
 .text{
 color:#dcddde;
 margin-top:2px;
-}
-
-.gif{
-max-width:300px;
-max-height:300px;
-border-radius:8px;
-margin-top:4px;
+white-space:pre-wrap;
 }
 
 .input{
 padding:12px;
 background:#2b2d31;
+display:flex;
+gap:10px;
+flex-direction:column;
+}
+
+.row{
 display:flex;
 gap:10px;
 }
@@ -123,6 +123,12 @@ background:#5865f2;
 color:white;
 cursor:pointer;
 }
+
+#typing{
+font-size:12px;
+color:#a1a1a1;
+height:16px;
+}
 </style>
 </head>
 
@@ -131,7 +137,7 @@ cursor:pointer;
 <div class="sidebar">
 <h2>KoriCord</h2>
 <div>2PyM</div>
-<div>🌐 Web ↔ Discord :D</div>
+<div>🌐 Web ↔ Discord</div>
 </div>
 
 <div class="chat">
@@ -139,8 +145,13 @@ cursor:pointer;
 <div id="messages" class="messages"></div>
 
 <div class="input">
+<div id="typing"></div>
+
+<div class="row">
 <input id="msg" placeholder="Escribe a Discord...">
 <button onclick="sendMessage()">Enviar</button>
+</div>
+
 </div>
 
 </div>
@@ -152,8 +163,12 @@ import {
 getDatabase,
 ref,
 push,
-onChildAdded
+onChildAdded,
+query,
+orderByChild
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+/* 🔥 FIREBASE */
 
 const firebaseConfig = {
 apiKey: "AIzaSyARq5j8Kf9p4SYj4sj3167BjVD-Q4KczQE",
@@ -168,41 +183,16 @@ appId: "1:228519016518:web:9062449c2b5135ee36b247"
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-function renderContent(text){
+/* 💬 MENSAJES ORDENADOS */
 
-if(!text) return "";
+const messagesRef = query(
+ref(db, "messages"),
+orderByChild("timestamp")
+);
 
-const isGif =
-text.includes("giphy") ||
-text.includes("tenor") ||
-text.includes("klipy") ||
-text.match(/\.(gif|png|jpg|jpeg|webp)$/i);
+/* 📩 RENDER MENSAJE */
 
-if(isGif){
-return `<img class="gif" src="${text}">`;
-}
-
-return `<div class="text">${text}</div>`;
-}
-
-/* 🌐 ENVIAR A FIREBASE */
-window.sendMessage = async function(){
-
-const text = document.getElementById("msg").value;
-if(!text) return;
-
-await push(ref(db,"webMessages"), {
-text: text,
-time: Date.now()
-});
-
-document.getElementById("msg").value="";
-};
-
-/* 💬 DISCORD → WEB */
-onChildAdded(ref(db,"discordMessages"), (snap) => {
-
-const data = snap.val();
+function renderMessage(data){
 
 const div = document.createElement("div");
 div.className = "msg";
@@ -225,47 +215,10 @@ data.avatar
 </div>
 
 <div class="username">
-@${data.username}
+@${data.username || "web"}
 </div>
 
-${renderContent(data.text)}
-
-</div>
-`;
-
-document.getElementById("messages").appendChild(div);
-
-document.getElementById("messages").scrollTop =
-document.getElementById("messages").scrollHeight;
-
-});
-
-/* 💬 ENTER PARA ENVIAR */
-document.getElementById("msg").addEventListener("keydown", (e) => {
-if (e.key === "Enter") sendMessage();
-});
-
-/* 💬 MENSAJES ENVIADOS DESDE LA WEB */
-onChildAdded(ref(db,"webMessages"), (snap) => {
-
-const data = snap.val();
-
-const div = document.createElement("div");
-div.className = "msg";
-
-const time = new Date(data.time)
-.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-
-div.innerHTML = `
-<div class="avatar">U</div>
-
-<div class="content">
-<div class="top">
-<span class="name">Tú</span>
-<span class="time">${time}</span>
-</div>
-
-${renderContent(data.text)}
+<div class="text">${data.text}</div>
 
 </div>
 `;
@@ -274,7 +227,51 @@ document.getElementById("messages").appendChild(div);
 
 document.getElementById("messages").scrollTop =
 document.getElementById("messages").scrollHeight;
+}
 
+/* 🔥 CARGA MENSAJES */
+
+onChildAdded(messagesRef, (snap) => {
+renderMessage(snap.val());
+});
+
+/* 🌐 ENVIAR MENSAJE */
+
+window.sendMessage = async function(){
+
+const input = document.getElementById("msg");
+const text = input.value;
+
+if(!text) return;
+
+await push(ref(db,"webMessages"), {
+text,
+nickname:"Said",
+username:"said1xp",
+avatar:"https://i.imgur.com/placeholder.png",
+timestamp: Date.now()
+});
+
+input.value="";
+};
+
+/* ⌨️ ENTER */
+
+document.getElementById("msg").addEventListener("keydown",(e)=>{
+if(e.key==="Enter") sendMessage();
+});
+
+/* ✏️ ESCRIBIENDO (BÁSICO) */
+
+const typingRef = ref(db,"typing");
+
+const input = document.getElementById("msg");
+
+input.addEventListener("input", ()=>{
+push(ref(db,"typing"),{
+user:"Said",
+time:Date.now()
+});
 });
 
 </script>
