@@ -3,6 +3,7 @@ import express from "express";
 import admin from "firebase-admin";
 
 /* 🔐 FIREBASE */
+
 const serviceAccount = JSON.parse(
   process.env.FIREBASE_SERVICE_ACCOUNT
 );
@@ -15,16 +16,18 @@ admin.initializeApp({
 const db = admin.database();
 
 /* 🌐 WEB SERVER */
+
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.static("public"));
 
 app.listen(PORT, () => {
-  console.log("🌐 Web activa en Render");
+  console.log(`🌐 Web activa en puerto ${PORT}`);
 });
 
-/* 🤖 DISCORD BOT */
+/* 🤖 DISCORD */
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -38,34 +41,70 @@ client.once("ready", () => {
 });
 
 /* 💬 DISCORD → FIREBASE */
+
 client.on("messageCreate", async (message) => {
+
   if (message.author.bot) return;
 
-  await db.ref("discordMessages").push({
-    nickname: message.member?.displayName || message.author.username,
-    username: message.author.username,
-    avatar: message.author.displayAvatarURL({
-      extension: "png",
-      size: 128
-    }),
+  await db.ref("messages").push({
+    source: "discord",
 
-    text: message.content,
-    server: message.guild?.name || "DM",
-    timestamp: Date.now()
+    nickname:
+      message.member?.displayName ||
+      message.author.username,
+
+    username:
+      message.author.username,
+
+    avatar:
+      message.author.displayAvatarURL({
+        forceStatic: false,
+        size: 128
+      }),
+
+    text:
+      message.content,
+
+    timestamp:
+      Date.now()
   });
+
 });
 
 /* 🌐 WEB → DISCORD */
+
 db.ref("webMessages").on("child_added", async (snap) => {
+
   const data = snap.val();
+
   if (!data?.text) return;
 
-  const channels = client.channels.cache;
-  const channel = channels.find(c => c.isTextBased());
+  const channel = client.channels.cache
+    .find(c => c.isTextBased());
 
-  if (channel) {
-    await channel.send(data.text);
-  }
+  if (!channel) return;
+
+  await channel.send(data.text);
+
+  await db.ref("messages").push({
+    source: "web",
+
+    nickname:
+      data.nickname || "Tú",
+
+    username:
+      data.username || "web",
+
+    avatar:
+      data.avatar || null,
+
+    text:
+      data.text,
+
+    timestamp:
+      data.timestamp || Date.now()
+  });
+
 });
 
 client.login(process.env.DISCORD_TOKEN);
