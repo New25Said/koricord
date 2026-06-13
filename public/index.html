@@ -51,11 +51,13 @@ background:#2b2d31;
 width:38px;
 height:38px;
 border-radius:50%;
+object-fit:cover;
 background:#5865f2;
 display:flex;
 align-items:center;
 justify-content:center;
 font-weight:bold;
+flex-shrink:0;
 }
 
 .content{
@@ -71,6 +73,13 @@ align-items:center;
 
 .name{
 font-weight:bold;
+}
+
+.username{
+font-size:12px;
+color:#949ba4;
+margin-top:2px;
+margin-bottom:4px;
 }
 
 .time{
@@ -152,7 +161,7 @@ appId: "1:228519016518:web:9062449c2b5135ee36b247"
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* 🌐 ENVIAR A FIREBASE (SIN USER PREFIX) */
+/* 🌐 ENVIAR A FIREBASE */
 window.sendMessage = async function(){
 
 const text = document.getElementById("msg").value;
@@ -178,14 +187,25 @@ const time = new Date(data.timestamp)
 .toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
 div.innerHTML = `
-<div class="avatar">${data.user[0].toUpperCase()}</div>
+${
+data.avatar
+? `<img class="avatar" src="${data.avatar}">`
+: `<div class="avatar">${(data.nickname || "?")[0].toUpperCase()}</div>`
+}
 
 <div class="content">
-  <div class="top">
-    <span class="name">${data.user}</span>
-    <span class="time">${time}</span>
-  </div>
-  <div class="text">${data.text}</div>
+
+<div class="top">
+<span class="name">${data.nickname || data.username}</span>
+<span class="time">${time}</span>
+</div>
+
+<div class="username">
+@${data.username}
+</div>
+
+<div class="text">${data.text}</div>
+
 </div>
 `;
 
@@ -198,19 +218,11 @@ document.getElementById("messages").scrollHeight;
 
 /* 💬 ENTER PARA ENVIAR */
 document.getElementById("msg").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") sendMessage();
+if (e.key === "Enter") sendMessage();
 });
 
-
-
-
-
-
-
-
-
-
-  onChildAdded(ref(db,"webMessages"), (snap) => {
+/* 💬 MENSAJES ENVIADOS DESDE LA WEB */
+onChildAdded(ref(db,"webMessages"), (snap) => {
 
 const data = snap.val();
 
@@ -220,16 +232,16 @@ div.className = "msg";
 const time = new Date(data.time)
 .toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
-/* 💡 mensaje propio (sin prefix, limpio como querías) */
 div.innerHTML = `
-<div class="avatar">${"U"}</div>
+<div class="avatar">U</div>
 
 <div class="content">
-  <div class="top">
-    <span class="name">Tú</span>
-    <span class="time">${time}</span>
-  </div>
-  <div class="text">${data.text}</div>
+<div class="top">
+<span class="name">Tú</span>
+<span class="time">${time}</span>
+</div>
+
+<div class="text">${data.text}</div>
 </div>
 `;
 
