@@ -3,31 +3,112 @@
 <head>
 <meta charset="UTF-8">
 <title>KoriCord</title>
+
 <style>
-body{margin:0;font-family:Arial;background:#313338;color:#fff;display:flex;height:100vh}
-#login{position:fixed;inset:0;background:#1e1f22;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:10}
-input,button{padding:10px;border:none;border-radius:6px}
-input{background:#2b2d31;color:#fff}
-button{background:#5865f2;color:#fff;cursor:pointer}
-.sidebar{width:240px;background:#2b2d31;padding:12px}
-.chat{flex:1;display:flex;flex-direction:column}
-.messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
-.msg{display:flex;gap:10px}
-.avatar{width:38px;height:38px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;object-fit:cover}
-.content{display:flex;flex-direction:column}
-.top{display:flex;gap:8px}
-.name{font-weight:bold}
-.time{font-size:11px;color:#aaa}
-.text{color:#ddd}
-#typing{font-size:12px;color:#aaa;padding-left:16px;height:18px}
+body{
+margin:0;
+font-family:Arial;
+background:#313338;
+color:white;
+display:flex;
+height:100vh;
+}
+
+#login{
+position:fixed;
+inset:0;
+background:#1e1f22;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+gap:10px;
+z-index:999;
+}
+
+input,button{
+padding:10px;
+border:none;
+border-radius:6px;
+}
+
+input{
+background:#2b2d31;
+color:white;
+}
+
+button{
+background:#5865f2;
+color:white;
+cursor:pointer;
+}
+
+.sidebar{
+width:240px;
+background:#2b2d31;
+padding:12px;
+}
+
+.chat{
+flex:1;
+display:flex;
+flex-direction:column;
+}
+
+.messages{
+flex:1;
+overflow-y:auto;
+padding:16px;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+.msg{
+display:flex;
+gap:10px;
+}
+
+.avatar{
+width:38px;
+height:38px;
+border-radius:50%;
+object-fit:cover;
+background:#5865f2;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+.content{
+display:flex;
+flex-direction:column;
+}
+
+.top{
+display:flex;
+gap:8px;
+}
+
+.name{font-weight:bold;}
+.time{font-size:11px;color:#aaa;}
+.text{color:#ddd;}
+
+#typing{
+font-size:12px;
+color:#aaa;
+padding-left:16px;
+height:18px;
+}
 </style>
 </head>
 
 <body>
 
+<!-- LOGIN -->
 <div id="login">
 <h2>¿Eres Kori?</h2>
-<input id="pass">
+<input id="pass" placeholder="contraseña">
 <button onclick="login()">Entrar</button>
 <p id="err"></p>
 </div>
@@ -39,17 +120,27 @@ button{background:#5865f2;color:#fff;cursor:pointer}
 <div class="chat">
 <div id="messages" class="messages"></div>
 <div id="typing"></div>
+
 <div style="display:flex;gap:10px;padding:12px;background:#2b2d31">
-<input id="msg">
+<input id="msg" placeholder="escribe...">
 <button onclick="send()">Enviar</button>
 </div>
 </div>
 
 <script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import{getDatabase,ref,push,onChildAdded,set,remove,onValue}from"https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
-const app=initializeApp({
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+import {
+getDatabase,
+ref,
+push,
+onChildAdded,
+set,
+remove,
+onValue
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+const app = initializeApp({
 apiKey:"AIzaSyA...",
 authDomain:"koricord-a5f4e.firebaseapp.com",
 databaseURL:"https://koricord-a5f4e-default-rtdb.firebaseio.com",
@@ -59,57 +150,100 @@ messagingSenderId:"228519016518",
 appId:"1:228519016518:web:9062449c2b5135ee36b247"
 });
 
-const db=getDatabase(app);
+const db = getDatabase(app);
 
-/* LOGIN */
-window.login=()=>{if(pass.value==="soykori")login.style.display="none";else err.innerText="solo Kori"};
+/* 🔐 LOGIN FIX REAL */
+window.login = function () {
+const pass = document.getElementById("pass").value;
 
-/* SEND */
-window.send=()=>{if(!msg.value)return;
-push(ref(db,"messages"),{
-source:"web",
-sender:"Kori",
-text:msg.value,
-timestamp:Date.now()
-});
-msg.value="";
+if (pass === "soykori") {
+document.getElementById("login").style.display = "none";
+} else {
+document.getElementById("err").innerText = "Solo Kori, intenta otra vez";
+}
 };
 
-/* MESSAGES FIX (ORDEN REAL) */
-let list=[];
-function render(){
-messages.innerHTML="";
-list.sort((a,b)=>a.timestamp-b.timestamp).forEach(m=>{
-const div=document.createElement("div");
-div.className="msg";
-const t=new Date(m.timestamp).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
-div.innerHTML=`
-<div class="avatar">${(m.sender||"?")[0]}</div>
-<div class="content">
-<div class="top"><span class="name">${m.sender}</span><span class="time">${t}</span></div>
-<div class="text">${m.text}</div>
-</div>`;
-messages.appendChild(div);
+/* SEND */
+window.send = async function () {
+const input = document.getElementById("msg");
+if (!input.value) return;
+
+await push(ref(db, "messages"), {
+source: "web",
+sender: "Kori",
+text: input.value,
+timestamp: Date.now()
 });
+
+input.value = "";
+};
+
+/* MESSAGES */
+let list = [];
+
+function render() {
+const box = document.getElementById("messages");
+box.innerHTML = "";
+
+list.sort((a, b) => a.timestamp - b.timestamp).forEach(m => {
+
+const div = document.createElement("div");
+div.className = "msg";
+
+const time = new Date(m.timestamp)
+.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+div.innerHTML = `
+<div class="avatar">${(m.sender || "?")[0]}</div>
+<div class="content">
+<div class="top">
+<span class="name">${m.sender}</span>
+<span class="time">${time}</span>
+</div>
+<div class="text">${m.text}</div>
+</div>
+`;
+
+box.appendChild(div);
+});
+
+box.scrollTop = box.scrollHeight;
 }
 
-onChildAdded(ref(db,"messages"),s=>{list.push(s.val());render();});
+onChildAdded(ref(db, "messages"), (snap) => {
+list.push(snap.val());
+render();
+});
 
 /* TYPING REAL */
 let typingTimer;
-msg.addEventListener("input",()=>{
-set(ref(db,"typing/web"),{name:"Web"});
-clearTimeout(typingTimer);
-typingTimer=setTimeout(()=>remove(ref(db,"typing/web")),1000);
+
+document.getElementById("msg").addEventListener("input", () => {
+
+set(ref(db, "typing/web"), {
+name: "Kori"
 });
 
-onValue(ref(db,"typing"),s=>{
-const d=s.val();
-typing.innerText=d?Object.values(d).map(x=>x.name+" escribiendo...").join(", "):"";
+clearTimeout(typingTimer);
+
+typingTimer = setTimeout(() => {
+remove(ref(db, "typing/web"));
+}, 1000);
+
+});
+
+onValue(ref(db, "typing"), (snap) => {
+const data = snap.val();
+
+document.getElementById("typing").innerText =
+data ? Object.values(data).map(u => u.name + " escribiendo...").join(", ") : "";
 });
 
 /* ENTER */
-msg.addEventListener("keydown",e=>{if(e.key==="Enter")send()});
+document.getElementById("msg").addEventListener("keydown", (e) => {
+if (e.key === "Enter") send();
+});
+
 </script>
 
 </body>
