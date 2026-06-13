@@ -2,7 +2,6 @@ import { Client, GatewayIntentBits } from "discord.js";
 import express from "express";
 import admin from "firebase-admin";
 
-/* FIREBASE */
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
@@ -32,7 +31,7 @@ client.once("ready", () => {
   console.log("BOT LISTO");
 });
 
-/* DISCORD → FIREBASE */
+/* DISCORD → FIREBASE (UNIFICADO) */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
@@ -42,7 +41,10 @@ client.on("messageCreate", async (message) => {
     source: "discord",
     sender: message.member?.displayName || message.author.username,
     username: message.author.username,
-    avatar: message.author.displayAvatarURL({ dynamic: true, size: 128 }),
+    avatar: message.author.displayAvatarURL({
+      dynamic: true,
+      size: 128
+    }),
     text: message.content || (sticker ? `🎟️ ${sticker.name}` : ""),
     timestamp: Date.now()
   });
