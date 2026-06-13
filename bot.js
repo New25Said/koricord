@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits } from "discord.js";
 import express from "express";
 import admin from "firebase-admin";
 
-/* 🔐 FIREBASE */
+/* FIREBASE */
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
@@ -12,17 +12,14 @@ admin.initializeApp({
 
 const db = admin.database();
 
-/* 🌐 WEB */
+/* WEB */
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static("public"));
+app.listen(PORT);
 
-app.listen(PORT, () => {
-  console.log("🌐 Web activa");
-});
-
-/* 🤖 DISCORD */
+/* DISCORD */
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -32,35 +29,32 @@ const client = new Client({
 });
 
 client.once("ready", () => {
-  console.log(`🤖 Logueado como ${client.user.tag}`);
+  console.log("BOT LISTO");
 });
 
-/* 💬 DISCORD → FIREBASE */
+/* DISCORD → FIREBASE */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
+  const sticker = message.stickers.first();
+
   await db.ref("messages").push({
     source: "discord",
-    nickname: message.member?.displayName || message.author.username,
+    sender: message.member?.displayName || message.author.username,
     username: message.author.username,
-    avatar: message.author.displayAvatarURL({
-      extension: message.author.avatar?.startsWith("a_") ? "gif" : "png",
-      size: 128,
-      dynamic: true
-    }),
-    text: message.content,
+    avatar: message.author.displayAvatarURL({ dynamic: true, size: 128 }),
+    text: message.content || (sticker ? `🎟️ ${sticker.name}` : ""),
     timestamp: Date.now()
   });
 });
 
-/* 🌐 WEB → DISCORD */
+/* WEB → DISCORD */
 db.ref("messages").on("child_added", async (snap) => {
   const data = snap.val();
   if (!data || data.source !== "web") return;
 
   const channel = client.channels.cache.find(c => c.isTextBased());
-  if (channel) await channel.send(data.text);
+  if (channel) channel.send(data.text);
 });
 
-/* 🚀 LOGIN */
 client.login(process.env.DISCORD_TOKEN);
