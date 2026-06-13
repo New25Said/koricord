@@ -42,7 +42,13 @@ client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
   await db.ref("discordMessages").push({
-    user: message.author.username,
+    nickname: message.member?.displayName || message.author.username,
+    username: message.author.username,
+    avatar: message.author.displayAvatarURL({
+      extension: "png",
+      size: 128
+    }),
+
     text: message.content,
     server: message.guild?.name || "DM",
     timestamp: Date.now()
@@ -58,7 +64,7 @@ db.ref("webMessages").on("child_added", async (snap) => {
   const channel = channels.find(c => c.isTextBased());
 
   if (channel) {
-    await channel.send(data.text); // 💥 SIN PREFIJOS
+    await channel.send(data.text);
   }
 });
 
