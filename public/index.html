@@ -14,7 +14,7 @@ button:hover{background:#4752c4;}
 /* Estructura de 4 Columnas estilo Discord */
 .app-container{display:none;height:100vh;width:100vw;}
 
-/* COLUMNA 1: Lista de Servidores (Extremo Izquierdo) */
+/* COLUMNA 1: Lista de Servidores */
 .guilds-sidebar{width:72px;background:#1e1f22;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:8px;border-right:1px solid #111214;overflow-y:auto;flex-shrink:0;}
 .guild-icon{width:48px;height:48px;border-radius:50%;background:#313338;color:#dbdee1;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold;cursor:pointer;transition:all 0.2s ease;overflow:hidden;position:relative;}
 .guild-icon img{width:100%;height:100%;object-fit:cover;}
@@ -73,7 +73,7 @@ button:hover{background:#4752c4;}
 .input-box input{width:100%;background:#383a40;color:#dbdee1;padding:12px;box-sizing:border-box;font-size:15px;border-radius:8px;border:none;}
 .typing-indicator{position:absolute;top:-18px;left:20px;font-size:12px;color:#abcdef;height:14px;}
 
-/* Modal de Perfil Detallado (Bug Corregido de Posición) */
+/* Modal de Perfil Detallado */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:250;align-items:center;justify-content:center;}
 .profile-modal{width:300px;background:#18191c;border-radius:8px;overflow:hidden;box-shadow:0 8px 16px rgba(0,0,0,0.5);}
 .profile-banner{height:60px;background:#5865f2;}
@@ -81,7 +81,6 @@ button:hover{background:#4752c4;}
 .profile-modal-avatar{width:80px;height:80px;border-radius:50%;border:6px solid #18191c;background:#5865f2;overflow:hidden;position:absolute;top:-40px;left:16px;}
 .profile-modal-avatar img{width:100%;height:100%;object-fit:cover;}
 
-/* Corrección del margen para que la foto no tape el apodo */
 .profile-names{margin-top: 52px;} 
 .profile-nick{font-size:20px;font-weight:bold;color:white;word-break:break-all;}
 .profile-user{font-size:14px;color:#b5bac1;margin-top:2px;}
@@ -102,13 +101,16 @@ button:hover{background:#4752c4;}
 </div>
 
 <div class="app-container" id="app">
+  <!-- COLUMNA 1: SELECTOR DE SERVIDORES -->
   <div class="guilds-sidebar" id="guildsContainer"></div>
 
+  <!-- COLUMNA 2: SELECTOR DE CANALES -->
   <div class="channels-sidebar">
     <div class="sidebar-title" id="currentGuildName">Cargando Server...</div>
     <div id="channels-container"></div>
   </div>
 
+  <!-- COLUMNA 3: FLUJO DE CHAT -->
   <div class="chat-area">
     <div id="messages" class="messages"></div>
     <div class="input-box">
@@ -117,12 +119,14 @@ button:hover{background:#4752c4;}
     </div>
   </div>
   
+  <!-- COLUMNA 4: LISTA DE MIEMBROS -->
   <div class="member-list">
     <div class="member-title">Miembros</div>
     <div id="members-container"></div>
   </div>
 </div>
 
+<!-- MODAL DE PERFIL DETALLADO -->
 <div class="modal-overlay" id="profileModal" onclick="closeProfile()">
   <div class="profile-modal" onclick="event.stopPropagation()">
     <div class="profile-banner"></div>
@@ -151,7 +155,8 @@ button:hover{background:#4752c4;}
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+// URLS DE STRINGS DE FIREBASE DEBIDAMENTE CORREGIDAS AQUÍ
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import { getDatabase, ref, push, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
 const firebaseConfig = {
@@ -238,7 +243,6 @@ function renderMessages(){
   box.scrollTop = box.scrollHeight;
 }
 
-// 1. Escuchar Servidores e Iconos en Tiempo Real
 onValue(ref(db, "guilds"), snap => {
   const container = document.getElementById("guildsContainer");
   container.innerHTML = "";
@@ -263,8 +267,6 @@ onValue(ref(db, "guilds"), snap => {
       currentGuildId = g.id;
       document.querySelectorAll('.guild-icon').forEach(i => i.classList.remove('active'));
       iconBtn.classList.add('active');
-      
-      // Reiniciar canales al cambiar de servidor
       currentChannelId = ""; 
       loadChannelsAndMembers();
     };
@@ -274,17 +276,14 @@ onValue(ref(db, "guilds"), snap => {
   loadChannelsAndMembers();
 });
 
-// 2. Cargar Canales y Miembros filtrados por Servidor Activo
 function loadChannelsAndMembers() {
   if(!currentGuildId) return;
 
-  // Cargar nombre del servidor actual en el encabezado
   onValue(ref(db, `guilds/${currentGuildId}`), gSnap => {
     const g = gSnap.val();
     if(g) document.getElementById("currentGuildName").innerText = g.name;
   });
 
-  // Escuchar canales de este servidor
   onValue(ref(db, `channels/${currentGuildId}`), snap => {
     const container = document.getElementById("channels-container");
     container.innerHTML = "";
@@ -309,7 +308,6 @@ function loadChannelsAndMembers() {
     renderMessages();
   });
 
-  // Escuchar miembros de este servidor
   onValue(ref(db, `usersStatus/${currentGuildId}`), snap => {
     const container = document.getElementById("members-container");
     container.innerHTML = "";
