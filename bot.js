@@ -2,7 +2,10 @@ import { Client, GatewayIntentBits } from "discord.js";
 import express from "express";
 import admin from "firebase-admin";
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+/* 🔐 FIREBASE */
+const serviceAccount = JSON.parse(
+  process.env.FIREBASE_SERVICE_ACCOUNT
+);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -11,15 +14,17 @@ admin.initializeApp({
 
 const db = admin.database();
 
+/* 🌐 WEB SERVER */
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 app.use(express.static("public"));
 
 app.listen(PORT, () => {
-  console.log("WEB ONLINE");
+  console.log("🌐 Web activa en Render");
 });
 
+/* 🤖 DISCORD BOT */
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -29,35 +34,39 @@ const client = new Client({
 });
 
 client.once("ready", () => {
-  console.log(`BOT LOGGED AS ${client.user.tag}`);
+  console.log(`🤖 Logueado como ${client.user.tag}`);
 });
 
-/* DISCORD -> FIREBASE */
+/* 💬 DISCORD → FIREBASE */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
-  const sticker = message.stickers.first();
-
-  await db.ref("messages").push({
-    source: "discord",
-    sender: message.member?.displayName || message.author.username,
+  await db.ref("discordMessages").push({
+    nickname: message.member?.displayName || message.author.username,
     username: message.author.username,
     avatar: message.author.displayAvatarURL({
-      dynamic: true,
+      extension: "png",
       size: 128
     }),
-    text: message.content || (sticker ? `🎟️ ${sticker.name}` : ""),
+
+    text: message.content,
+    server: message.guild?.name || "DM",
     timestamp: Date.now()
   });
 });
 
-/* WEB -> DISCORD */
-db.ref("messages").on("child_added", async (snap) => {
+/* 🌐 WEB → DISCORD */
+db.ref("webMessages").on("child_added", async (snap) => {
   const data = snap.val();
-  if (!data || data.source !== "web") return;
+  if (!data?.text) return;
 
-  const channel = client.channels.cache.find(c => c.isTextBased());
-  if (channel) channel.send(data.text);
+  const channels = client.channels.cache;
+  const channel = channels.find(c => c.isTextBased());
+
+  if (channel) {
+    await channel.send(data.text);
+  }
 });
 
 client.login(process.env.DISCORD_TOKEN);
+
