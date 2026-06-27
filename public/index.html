@@ -21,7 +21,6 @@ button:hover{background:#4752c4;}
 .guild-icon:hover, .guild-icon.active{border-radius:16px;background:#5865f2;color:white;}
 .guild-separator{width:32px;height:2px;background:#35373c;margin:4px 0;border-radius:1px;}
 
-/* Burbuja de notificación para Servidores */
 .guild-badge {position:absolute;bottom:0;right:0;width:14px;height:14px;background:#f23f43;border-radius:50%;border:2px solid #1e1f22;display:none;}
 .guild-icon.unread .guild-badge {display:block;}
 
@@ -34,7 +33,6 @@ button:hover{background:#4752c4;}
 .channel-name-wrapper{display:flex;align-items:center;gap:6px;}
 .channel-name-wrapper::before{content:"#";font-size:18px;color:#80848e;margin-right:2px;}
 
-/* Burbuja de notificación para Canales */
 .channel-badge {width:8px;height:8px;background:#ffffff;border-radius:50%;display:none;}
 .channel-btn.unread .channel-badge {display:block;}
 
@@ -74,7 +72,7 @@ button:hover{background:#4752c4;}
 .time{font-size:11px;color:#949ba4;}
 .text{color:#dbdee1;font-size:15px;word-break:break-word;line-height:1.4;}
 
-/* Estilos Markdown */
+/* Estilos Markdown de la Web */
 .text code {background:#2b2d31; padding:2px 4px; border-radius:4px; font-family:monospace; font-size:14px; color:#e0c89a;}
 
 .media-attachment{margin-top:8px;max-width:400px;max-height:300px;border-radius:8px;overflow:hidden;display:block;}
@@ -185,23 +183,26 @@ let currentChannelId = "";
 let unreadCount = 0;
 let isTabFocused = true;
 
-// Diccionarios de almacenamiento para estados de lectura pendientes
 let unreadChannels = {};
 let unreadGuilds = {};
 
 window.addEventListener('focus', () => { isTabFocused = true; unreadCount = 0; document.title = "KoriCord"; });
 window.addEventListener('blur', () => { isTabFocused = false; });
 
-// Motor Renderizador de Markdown compatible con Discord (MD)
-function parseMarkdown(text) {
+// Función para parsear MD de forma segura (Solo texto plano de Discord, sin inyecciones HTML externas)
+function escapeHTML(text) {
   if(!text) return "";
-  let html = text
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") // Escapar HTML crudo
-    .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')           // Negrita
-    .replace(/__([\s\S]+?)__/g, '<u>$1</u>')                           // Subrayado
-    .replace(/\*([\s\S]+?)\*/g, '<em>$1</em>')                         // Itálica
-    .replace(/~~([\s\S]+?)~~/g, '<del>$1</del>')                       // Tachado
-    .replace(/`([^`]+)`/g, '<code>$1</code>');                        // Bloques de código en línea
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function parseMarkdown(text) {
+  let escaped = escapeHTML(text);
+  let html = escaped
+    .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')           
+    .replace(/__([\s\S]+?)__/g, '<u>$1</u>')                           
+    .replace(/\*([\s\S]+?)\*/g, '<em>$1</em>')                         
+    .replace(/~~([\s\S]+?)~~/g, '<del>$1</del>')                       
+    .replace(/`([^`]+)`/g, '<code>$1</code>');                        
   return html;
 }
 
@@ -250,6 +251,9 @@ function renderMessages(){
       }
     }
 
+    // CONDICIONAL CRÍTICA: Si el mensaje viene de la web, renderiza MD. Si viene de Discord, escapa el HTML puro para seguridad.
+    const textHtml = m.isWeb ? parseMarkdown(m.text) : escapeHTML(m.text);
+
     div.innerHTML = `
     <div class="avatar-container"><div class="avatar">${avatarHtml}</div></div>
     <div class="msg-content">
@@ -258,7 +262,7 @@ function renderMessages(){
         <span class="sub-user">@${m.username || 'kori'}</span>
         <span class="time">${new Date(m.timestamp).toLocaleTimeString()}</span>
       </div>
-      <div class="text">${parseMarkdown(m.text)}</div>
+      <div class="text">${textHtml}</div>
       ${attachmentHtml}
     </div>`;
     box.appendChild(div);
@@ -266,7 +270,6 @@ function renderMessages(){
   box.scrollTop = box.scrollHeight;
 }
 
-// 1. Escuchar Servidores
 onValue(ref(db, "guilds"), snap => {
   const container = document.getElementById("guildsContainer");
   container.innerHTML = "";
@@ -290,7 +293,7 @@ onValue(ref(db, "guilds"), snap => {
 
     iconBtn.onclick = () => {
       currentGuildId = g.id;
-      unreadGuilds[g.id] = false; // Quitar burbuja al hacer clic
+      unreadGuilds[g.id] = false;
       iconBtn.classList.remove('unread');
       document.querySelectorAll('.guild-icon').forEach(i => i.classList.remove('active'));
       iconBtn.classList.add('active');
@@ -335,7 +338,7 @@ function loadChannelsAndMembers() {
 
       btn.onclick = () => {
         currentChannelId = ch.id;
-        unreadChannels[ch.id] = false; // Quitar burbuja
+        unreadChannels[ch.id] = false;
         btn.classList.remove('unread');
         document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -384,12 +387,10 @@ function loadChannelsAndMembers() {
   });
 }
 
-// Escuchar la entrada de nuevos mensajes en tiempo real para activar las burbujas de notificación
 onChildAdded(ref(db,"discordMessages"), snap=>{
   const msg = snap.val();
-  messages.push(msg);
+  messages.push({...msg, isWeb: false}); // Marca de origen externa
   
-  // Lógica de burbujas en vivo
   if(msg.channelId !== currentChannelId) {
     unreadChannels[msg.channelId] = true;
     const chNode = document.getElementById(`channel-node-${msg.channelId}`);
@@ -413,7 +414,8 @@ onChildAdded(ref(db,"webMessages"), snap=>{
     nickname: "Kori",
     username: "soykori",
     timestamp: data.time,
-    channelId: data.channelId
+    channelId: data.channelId,
+    isWeb: true // Marca exclusiva para activar Markdown
   });
   renderMessages();
 });
