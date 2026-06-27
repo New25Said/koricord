@@ -17,7 +17,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static("public"));
-
 app.listen(PORT, () => {
   console.log("🌐 Web activa en Render");
 });
@@ -28,53 +27,105 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageTyping
+    GatewayIntentBits.GuildPresences, // Requerido para ver quién está online/offline
+    GatewayIntentBits.GuildMembers
   ]
 });
 
+// Función para sincronizar todos los usuarios del servidor y su estado actual
+async function updateAllUsersStatus() {
+  const guilds = client.guilds.cache.values();
+  for (const guild of guilds) {
+    try {
+      const members = await guild.members.fetch({ withPresences: true });
+      members.forEach(member => {
+        if (member.user.bot) return;
+
+        // Determinar estado de presencia de Discord
+        const presence = member.presence?.status;
+        const isOnline = presence === "online" || presence === "idle" || presence === "dnd";
+
+        db.ref(`usersStatus/${member.user.id}`).set({
+          uid: member.user.id,
+          nickname: member.displayName,
+          username: member.user.username,
+          avatar: member.user.displayAvatarURL({ extension: 'png', size: 128 }) || null,
+          status: isOnline ? "online" : "offline"
+        });
+      });
+    } catch (e) {
+      console.error("Error cargando usuarios:", e);
+    }
+  }
+}
+
 client.once("ready", () => {
   console.log(`🤖 Logueado como ${client.user.tag}`);
+  updateAllUsersStatus();
 });
 
-/* typing discord */
-client.on("typingStart", (typing) => {
-  db.ref("typing/discord").set({
-    username: typing.user?.username || "alguien",
-    time: Date.now()
+/* 🟢 ESCUCHAR CAMBIOS DE ESTADO (Online/Offline) */
+client.on("presenceUpdate", (oldPresence, newPresence) => {
+  if (!newPresence || newPresence.user.bot) return;
+  
+  const member = newPresence.member;
+  const status = newPresence.status;
+  const isOnline = status === "online" || status === "idle" || status === "dnd";
+
+  db.ref(`usersStatus/${newPresence.user.id}`).update({
+    nickname: member?.displayName || newPresence.user.username,
+    username: newPresence.user.username,
+    avatar: newPresence.user.displayAvatarURL({ extension: 'png', size: 128 }),
+    status: isOnline ? "online" : "offline"
   });
 });
 
-/* 💬 DISCORD → FIREBASE */
+/* 💬 DISCORD → FIREBASE (Mensajes + Multimedia) */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
-  // Obtiene la URL limpia del avatar del usuario de Discord
+  // Extraer fotos o videos adjuntos
+  let attachments = [];
+  if (message.attachments.size > 0) {
+    message.attachments.forEach(att => {
+      const isImage = att.contentType?.startsWith("image/");
+      const isVideo = att.contentType?.startsWith("video/");
+      
+      if (isImage) {
+        attachments.push({ type: "image", url: att.url });
+      } else if (isVideo) {
+        attachments.push({ type: "video", url: att.url });
+      }
+    });
+  }
+
   const avatarUrl = message.author.displayAvatarURL({ extension: 'png', size: 128 });
 
   await db.ref("discordMessages").push({
     nickname: message.member?.displayName || message.author.username,
     username: message.author.username,
-    avatar: avatarUrl, // URL guardada de manera exitosa
+    avatar: avatarUrl,
     text: message.content,
+    attachments: attachments,
     server: message.guild?.name || "DM",
     timestamp: Date.now()
   });
-
-  db.ref("typing/discord").remove();
 });
 
-/* 🌐 WEB → DISCORD */
+/* 🌐 WEB → DISCORD (Mensajes limpios sin duplicados) */
 db.ref("webMessages").on("child_added", async (snap) => {
   const data = snap.val();
   if (!data?.text) return;
-  
-  // Evitar que vuelva a procesar si ya se envió (control de marcas de tiempo muy recientes opcional)
-  // Buscamos el primer canal de texto disponible donde el bot pueda escribir
+
+  // Evitar loops temporales
+  if (Date.now() - data.time > 5000) return;
+
+  // Buscar un canal donde el bot pueda escribir
   const channel = client.channels.cache.find(c => c.isTextBased() && c.permissionsFor(client.user)?.has("SendMessages"));
   
   if (channel) {
-    // Para evitar loops, el bot envía el mensaje. El "if(message.author.bot) return" de arriba evitará duplicados.
-    await channel.send(`**Kori:** ${data.text}`);
+    // Mandamos el texto limpio a Discord directamente
+    await channel.send(data.text);
   }
 });
 
