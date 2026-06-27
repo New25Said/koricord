@@ -13,7 +13,7 @@ button:hover{background:#4752c4;}
 
 /* Estructura Principal tipo Discord */
 .app-container{display:none;height:100vh;width:100vw;}
-.chat-area{flex:1;display:flex;flex-direction:column;height:100vh;background:#313338;}
+.chat-area{flex:1;display:flex;flex-direction:column;height:100vh;background:#313338;position:relative;}
 .messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:4px;}
 
 /* Barra Lateral de Usuarios */
@@ -23,7 +23,7 @@ button:hover{background:#4752c4;}
 .member-card:hover{background:#35373c;}
 
 /* Componentes de Usuario y Avatares */
-.avatar-container{position:relative;width:38px;height:38px;}
+.avatar-container{position:relative;width:38px;height:38px;flex-shrink:0;}
 .avatar{width:38px;height:38px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;overflow:hidden;}
 .avatar img{width:100%;height:100%;object-fit:cover;}
 
@@ -32,10 +32,11 @@ button:hover{background:#4752c4;}
 .status-online{background:#23a55a;}
 .status-offline{background:#80848e;}
 
-/* Detalles de Texto de Usuarios */
-.user-info{display:flex;flex-direction:column;min-width:0;}
+/* Detalles de Texto de Usuarios y Actividad */
+.user-info{display:flex;flex-direction:column;min-width:0;flex:1;}
 .member-nick{font-weight:500;font-size:14px;color:#f2f3f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .member-user{font-size:11px;color:#949ba4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.member-activity{font-size:11px;color:#b5bac1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;font-style:italic;}
 
 /* Estilos de Mensajes */
 .msg{display:flex;gap:16px;padding:8px;border-radius:4px;}
@@ -51,9 +52,16 @@ button:hover{background:#4752c4;}
 .media-attachment{margin-top:8px;max-width:400px;max-height:300px;border-radius:8px;overflow:hidden;display:block;}
 .media-attachment img, .media-attachment video{max-width:100%;max-height:300px;border-radius:8px;}
 
-/* Input de Chat */
-.input-box{padding:0 16px 24px 16px;background:#313338;}
-.input-box input{width:100%;background:#383a40;color:#dbdee1;padding:12px;box-sizing:border-box;font-size:15px;}
+/* Input de Chat y Zona de Typing */
+.input-box{padding:0 16px 24px 16px;background:#313338;position:relative;}
+.input-box input{width:100%;background:#383a40;color:#dbdee1;padding:12px;box-sizing:border-box;font-size:15px;border-radius:8px;}
+.typing-indicator{position:absolute;top:-18px;left:20px;font-size:12px;color:#abcdef;height:14px;animation:pulse 1.5s infinite;}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
 </style>
 </head>
 
@@ -70,6 +78,8 @@ button:hover{background:#4752c4;}
   <div class="chat-area">
     <div id="messages" class="messages"></div>
     <div class="input-box">
+      <!-- Indicador de que alguien escribe -->
+      <div id="typing" class="typing-indicator"></div>
       <input id="msg" placeholder="Enviar mensaje..." />
     </div>
   </div>
@@ -122,7 +132,6 @@ const avatarHtml = m.avatar
     ? `<img src="${m.avatar}" alt="">`
     : (m.nickname || "K")[0];
 
-// Soporte para adjuntos multimedia (Imágenes y Videos)
 let attachmentHtml = "";
 if(m.attachments && m.attachments.length > 0){
   for(const att of m.attachments){
@@ -152,13 +161,11 @@ box.appendChild(div);
 box.scrollTop = box.scrollHeight;
 }
 
-// Escuchar mensajes de Discord
 onChildAdded(ref(db,"discordMessages"), snap=>{
 messages.push(snap.val());
 render();
 });
 
-// Escuchar mensajes de la Web (Kori)
 onChildAdded(ref(db,"webMessages"), snap=>{
 const data = snap.val();
 messages.push({
@@ -170,14 +177,13 @@ messages.push({
 render();
 });
 
-// Escuchar lista de usuarios conectados/desconectados
+// Escuchar lista de usuarios conectados + actividades
 onValue(ref(db, "usersStatus"), snap => {
   const container = document.getElementById("members-container");
   container.innerHTML = "";
   const users = snap.val();
   if(!users) return;
 
-  // Ordenar para que salgan primero los online
   const sortedUsers = Object.values(users).sort((a,b) => (b.status === "online") - (a.status === "online"));
 
   for(const u of sortedUsers){
@@ -187,6 +193,12 @@ onValue(ref(db, "usersStatus"), snap => {
     const userAvatar = u.avatar ? `<img src="${u.avatar}">` : u.nickname[0];
     const statusClass = u.status === "online" ? "status-online" : "status-offline";
 
+    // Validar si tiene actividad asignada (Juegos o Spotify)
+    let activityHtml = "";
+    if(u.status === "online" && u.activity) {
+      activityHtml = `<span class="member-activity">${u.activity}</span>`;
+    }
+
     card.innerHTML = `
       <div class="avatar-container">
         <div class="avatar">${userAvatar}</div>
@@ -195,9 +207,22 @@ onValue(ref(db, "usersStatus"), snap => {
       <div class="user-info">
         <span class="member-nick">${u.nickname}</span>
         <span class="member-user">@${u.username}</span>
+        ${activityHtml}
       </div>
     `;
     container.appendChild(card);
+  }
+});
+
+// Escuchar si alguien está escribiendo desde Discord en tiempo real
+onValue(ref(db, "typing/discord"), snap => {
+  const typingBox = document.getElementById("typing");
+  const data = snap.val();
+  
+  if (data && data.username && (Date.now() - data.time < 6000)) {
+    typingBox.innerText = `@${data.username} está escribiendo...`;
+  } else {
+    typingBox.innerText = "";
   }
 });
 
