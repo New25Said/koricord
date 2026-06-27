@@ -31,13 +31,11 @@ const client = new Client({
   ]
 });
 
-// Helper avanzado para limpiar strings de actividad (Remueve strings de emojis custom rotos de Discord)
 function getMemberActivity(member) {
   if (!member.presence || !member.presence.activities.length) return null;
   for (const activity of member.presence.activities) {
     if (activity.name === "Custom Status") {
       if(!activity.state) return null;
-      // Reemplaza formatos <:nombre:id> por un emoji limpio ✨
       let cleanState = activity.state.replace(/<a?:.+?:\d+>/g, '✨');
       return `✨ ${cleanState}`;
     }
@@ -47,26 +45,22 @@ function getMemberActivity(member) {
   return member.presence.activities[0].name ? `✨ ${member.presence.activities[0].name}` : null;
 }
 
-// Sincronización Estructurada Completa por Servidor
+// Sincronización Estructurada Completa (Servidores, Canales, Roles y Miembros)
 async function syncDeepDiscordStructure() {
+  console.log("🔄 Ejecutando sincronización de canales, roles y servidores...");
   const guilds = client.guilds.cache.values();
-  
-  // Limpiar ramas viejas para reconstruir la estructura limpia multiserver
-  await db.ref("guilds").remove();
-  await db.ref("channels").remove();
-  await db.ref("usersStatus").remove();
 
   for (const guild of guilds) {
     try {
-      // 1. Guardar metadatos del Servidor (Nombre e Icono)
       const iconUrl = guild.iconURL({ extension: 'png', size: 128 }) || null;
-      await db.ref(`guilds/${guild.id}`).set({
+      await db.ref(`guilds/${guild.id}`).update({
         id: guild.id,
         name: guild.name,
         iconUrl: iconUrl
       });
 
-      // 2. Guardar canales asociados específicamente a este Servidor
+      // Sincronizar canales existentes (si se borró alguno, limpiamos la lista primero)
+      await db.ref(`channels/${guild.id}`).remove();
       const channels = await guild.channels.fetch();
       channels.forEach(ch => {
         if (ch.isTextBased()) {
@@ -77,7 +71,7 @@ async function syncDeepDiscordStructure() {
         }
       });
 
-      // 3. Guardar miembros con sus roles locales del Servidor
+      // Sincronizar roles y miembros
       const members = await guild.members.fetch({ withPresences: true });
       members.forEach(member => {
         if (member.user.bot) return;
@@ -106,9 +100,14 @@ async function syncDeepDiscordStructure() {
 client.once("ready", () => {
   console.log(`🤖 Logueado como ${client.user.tag}`);
   syncDeepDiscordStructure();
+
+  // 🕒 TEMPORIZADOR AUTOMÁTICO: Escanea y actualiza canales y roles cada 5 minutos de forma silenciosa
+  setInterval(() => {
+    syncDeepDiscordStructure();
+  }, 5 * 60 * 1000); 
 });
 
-/* 🟢 DETECTAR CAMBIOS DE PRESENCIA / JUEGOS EN VIVO */
+/* 🟢 CAMBIOS DE PRESENCIA / JUEGOS EN VIVO */
 client.on("presenceUpdate", (oldPresence, newPresence) => {
   if (!newPresence || newPresence.user.bot) return;
   const member = newPresence.member;
@@ -159,6 +158,7 @@ client.on("messageCreate", async (message) => {
     avatar: message.author.displayAvatarURL({ extension: 'png', size: 128 }),
     text: message.content,
     attachments: attachments,
+    guildId: message.guild.id, // Guardamos el ID del server de procedencia para las burbujas web
     channelId: message.channel.id, 
     timestamp: Date.now()
   });
