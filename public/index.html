@@ -21,13 +21,22 @@ button:hover{background:#4752c4;}
 .guild-icon:hover, .guild-icon.active{border-radius:16px;background:#5865f2;color:white;}
 .guild-separator{width:32px;height:2px;background:#35373c;margin:4px 0;border-radius:1px;}
 
+/* Burbuja de notificación para Servidores */
+.guild-badge {position:absolute;bottom:0;right:0;width:14px;height:14px;background:#f23f43;border-radius:50%;border:2px solid #1e1f22;display:none;}
+.guild-icon.unread .guild-badge {display:block;}
+
 /* COLUMNA 2: Lista de Canales */
 .channels-sidebar{width:220px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:4px;border-right:1px solid #1f2023;overflow-y:auto;flex-shrink:0;}
 .sidebar-title{font-size:12px;font-weight:bold;color:#949ba4;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.channel-btn{display:flex;align-items:center;gap:6px;padding:8px;border-radius:4px;color:#949ba4;cursor:pointer;font-size:14px;font-weight:500;}
+.channel-btn{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:4px;color:#949ba4;cursor:pointer;font-size:14px;font-weight:500;position:relative;}
 .channel-btn:hover{background:#35373c;color:#dbdee1;}
 .channel-btn.active{background:#404249;color:white;}
-.channel-btn::before{content:"#";font-size:18px;color:#80848e;margin-right:2px;}
+.channel-name-wrapper{display:flex;align-items:center;gap:6px;}
+.channel-name-wrapper::before{content:"#";font-size:18px;color:#80848e;margin-right:2px;}
+
+/* Burbuja de notificación para Canales */
+.channel-badge {width:8px;height:8px;background:#ffffff;border-radius:50%;display:none;}
+.channel-btn.unread .channel-badge {display:block;}
 
 /* COLUMNA 3: Área Central de Chat */
 .chat-area{flex:1;display:flex;flex-direction:column;height:100vh;background:#313338;position:relative;min-width:0;}
@@ -63,7 +72,10 @@ button:hover{background:#4752c4;}
 .name{font-weight:bold;color:#f2f3f5;font-size:15px;}
 .sub-user{font-size:11px;color:#949ba4;}
 .time{font-size:11px;color:#949ba4;}
-.text{color:#dbdee1;font-size:15px;word-break:break-word;}
+.text{color:#dbdee1;font-size:15px;word-break:break-word;line-height:1.4;}
+
+/* Estilos Markdown */
+.text code {background:#2b2d31; padding:2px 4px; border-radius:4px; font-family:monospace; font-size:14px; color:#e0c89a;}
 
 .media-attachment{margin-top:8px;max-width:400px;max-height:300px;border-radius:8px;overflow:hidden;display:block;}
 .media-attachment img, .media-attachment video{max-width:100%;max-height:300px;border-radius:8px;}
@@ -101,16 +113,13 @@ button:hover{background:#4752c4;}
 </div>
 
 <div class="app-container" id="app">
-  <!-- COLUMNA 1: SELECTOR DE SERVIDORES -->
   <div class="guilds-sidebar" id="guildsContainer"></div>
 
-  <!-- COLUMNA 2: SELECTOR DE CANALES -->
   <div class="channels-sidebar">
     <div class="sidebar-title" id="currentGuildName">Cargando Server...</div>
     <div id="channels-container"></div>
   </div>
 
-  <!-- COLUMNA 3: FLUJO DE CHAT -->
   <div class="chat-area">
     <div id="messages" class="messages"></div>
     <div class="input-box">
@@ -119,14 +128,12 @@ button:hover{background:#4752c4;}
     </div>
   </div>
   
-  <!-- COLUMNA 4: LISTA DE MIEMBROS -->
   <div class="member-list">
     <div class="member-title">Miembros</div>
     <div id="members-container"></div>
   </div>
 </div>
 
-<!-- MODAL DE PERFIL DETALLADO -->
 <div class="modal-overlay" id="profileModal" onclick="closeProfile()">
   <div class="profile-modal" onclick="event.stopPropagation()">
     <div class="profile-banner"></div>
@@ -155,7 +162,6 @@ button:hover{background:#4752c4;}
 </div>
 
 <script type="module">
-// URLS DE STRINGS DE FIREBASE DEBIDAMENTE CORREGIDAS AQUÍ
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import { getDatabase, ref, push, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
@@ -179,8 +185,25 @@ let currentChannelId = "";
 let unreadCount = 0;
 let isTabFocused = true;
 
+// Diccionarios de almacenamiento para estados de lectura pendientes
+let unreadChannels = {};
+let unreadGuilds = {};
+
 window.addEventListener('focus', () => { isTabFocused = true; unreadCount = 0; document.title = "KoriCord"; });
 window.addEventListener('blur', () => { isTabFocused = false; });
+
+// Motor Renderizador de Markdown compatible con Discord (MD)
+function parseMarkdown(text) {
+  if(!text) return "";
+  let html = text
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") // Escapar HTML crudo
+    .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')           // Negrita
+    .replace(/__([\s\S]+?)__/g, '<u>$1</u>')                           // Subrayado
+    .replace(/\*([\s\S]+?)\*/g, '<em>$1</em>')                         // Itálica
+    .replace(/~~([\s\S]+?)~~/g, '<del>$1</del>')                       // Tachado
+    .replace(/`([^`]+)`/g, '<code>$1</code>');                        // Bloques de código en línea
+  return html;
+}
 
 function playNotificationSound() {
   try {
@@ -188,12 +211,12 @@ function playNotificationSound() {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(550, ctx.currentTime);
-    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08);
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    osc.frequency.setValueAtTime(580, ctx.currentTime);
+    osc.frequency.setValueAtTime(900, ctx.currentTime + 0.07);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
     osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + 0.3);
+    osc.start(); osc.stop(ctx.currentTime + 0.25);
   } catch(e){}
 }
 
@@ -235,7 +258,7 @@ function renderMessages(){
         <span class="sub-user">@${m.username || 'kori'}</span>
         <span class="time">${new Date(m.timestamp).toLocaleTimeString()}</span>
       </div>
-      <div class="text">${m.text || ""}</div>
+      <div class="text">${parseMarkdown(m.text)}</div>
       ${attachmentHtml}
     </div>`;
     box.appendChild(div);
@@ -243,6 +266,7 @@ function renderMessages(){
   box.scrollTop = box.scrollHeight;
 }
 
+// 1. Escuchar Servidores
 onValue(ref(db, "guilds"), snap => {
   const container = document.getElementById("guildsContainer");
   container.innerHTML = "";
@@ -254,17 +278,20 @@ onValue(ref(db, "guilds"), snap => {
 
   list.forEach(g => {
     const iconBtn = document.createElement("div");
-    iconBtn.className = `guild-icon ${g.id === currentGuildId ? 'active' : ''}`;
+    iconBtn.id = `guild-node-${g.id}`;
+    iconBtn.className = `guild-icon ${g.id === currentGuildId ? 'active' : ''} ${unreadGuilds[g.id] ? 'unread' : ''}`;
     iconBtn.title = g.name;
     
     if(g.iconUrl) {
-      iconBtn.innerHTML = `<img src="${g.iconUrl}" alt="${g.name}">`;
+      iconBtn.innerHTML = `<img src="${g.iconUrl}" alt="${g.name}"><div class="guild-badge"></div>`;
     } else {
-      iconBtn.innerText = g.name.split(" ").map(w => w[0]).join("").substring(0,3);
+      iconBtn.innerHTML = `${g.name.split(" ").map(w => w[0]).join("").substring(0,3)}<div class="guild-badge"></div>`;
     }
 
     iconBtn.onclick = () => {
       currentGuildId = g.id;
+      unreadGuilds[g.id] = false; // Quitar burbuja al hacer clic
+      iconBtn.classList.remove('unread');
       document.querySelectorAll('.guild-icon').forEach(i => i.classList.remove('active'));
       iconBtn.classList.add('active');
       currentChannelId = ""; 
@@ -291,14 +318,25 @@ function loadChannelsAndMembers() {
     if(!channels) return;
 
     const list = Object.values(channels);
-    if(!currentChannelId && list.length > 0) currentChannelId = list[0].id;
+    if(!currentChannelId && list.length > 0) {
+      currentChannelId = list[0].id;
+      unreadChannels[currentChannelId] = false;
+    }
 
     list.forEach(ch => {
       const btn = document.createElement("div");
-      btn.className = `channel-btn ${ch.id === currentChannelId ? 'active' : ''}`;
-      btn.innerText = ch.name;
+      btn.id = `channel-node-${ch.id}`;
+      btn.className = `channel-btn ${ch.id === currentChannelId ? 'active' : ''} ${unreadChannels[ch.id] ? 'unread' : ''}`;
+      
+      btn.innerHTML = `
+        <div class="channel-name-wrapper">${ch.name}</div>
+        <div class="channel-badge"></div>
+      `;
+
       btn.onclick = () => {
         currentChannelId = ch.id;
+        unreadChannels[ch.id] = false; // Quitar burbuja
+        btn.classList.remove('unread');
         document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         renderMessages();
@@ -346,8 +384,24 @@ function loadChannelsAndMembers() {
   });
 }
 
+// Escuchar la entrada de nuevos mensajes en tiempo real para activar las burbujas de notificación
 onChildAdded(ref(db,"discordMessages"), snap=>{
-  messages.push(snap.val());
+  const msg = snap.val();
+  messages.push(msg);
+  
+  // Lógica de burbujas en vivo
+  if(msg.channelId !== currentChannelId) {
+    unreadChannels[msg.channelId] = true;
+    const chNode = document.getElementById(`channel-node-${msg.channelId}`);
+    if(chNode) chNode.classList.add('unread');
+    
+    if(msg.guildId && msg.guildId !== currentGuildId) {
+      unreadGuilds[msg.guildId] = true;
+      const gNode = document.getElementById(`guild-node-${msg.guildId}`);
+      if(gNode) gNode.classList.add('unread');
+    }
+  }
+
   renderMessages();
   if (!isTabFocused) { unreadCount++; document.title = `(${unreadCount}) 🔴 KoriCord`; playNotificationSound(); }
 });
