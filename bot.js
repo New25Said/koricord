@@ -29,27 +29,35 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildPresences, 
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessageTyping // Obligatorio para detectar cuándo escriben
+    GatewayIntentBits.GuildMessageTyping 
   ]
 });
 
-// Helper para extraer qué está haciendo el usuario (Música, juegos, etc)
+// Helper para extraer qué hace el usuario sin que tire el texto genérico "Custom Status"
 function getMemberActivity(member) {
   if (!member.presence || !member.presence.activities.length) return null;
   
-  // Buscar actividad principal (tipo 0 = Jugando, tipo 2 = Escuchando)
-  const activity = member.presence.activities[0];
-  if (activity.type === 2) {
-    return `🎧 Escuchando ${activity.name}`;
-  } else if (activity.type === 0) {
-    return `🎮 Jugando a ${activity.name}`;
-  } else if (activity.name) {
-    return `✨ ${activity.name}`;
+  // Buscar a través de las actividades del usuario
+  for (const activity of member.presence.activities) {
+    // Si es el texto de Estado Personalizado (Custom Status)
+    if (activity.name === "Custom Status") {
+      return activity.state ? `✨ ${activity.state}` : null;
+    }
+    // Si está escuchando música (Spotify)
+    if (activity.type === 2) {
+      return `🎧 Escuchando ${activity.name}`;
+    }
+    // Si está jugando
+    if (activity.type === 0) {
+      return `🎮 Jugando a ${activity.name}`;
+    }
   }
-  return null;
+  
+  // Alternativa por defecto si hay algo más
+  return member.presence.activities[0].name ? `✨ ${member.presence.activities[0].name}` : null;
 }
 
-// Sincronizar todos los estados y actividades al encender
+// Sincronizar todos los estados finos (online, idle, dnd, offline) al arrancar
 async function updateAllUsersStatus() {
   const guilds = client.guilds.cache.values();
   for (const guild of guilds) {
@@ -58,8 +66,8 @@ async function updateAllUsersStatus() {
       members.forEach(member => {
         if (member.user.bot) return;
 
-        const presence = member.presence?.status;
-        const isOnline = presence === "online" || presence === "idle" || presence === "dnd";
+        // Extraer estado puro de Discord (online, idle, dnd) o marcar offline
+        const status = member.presence?.status || "offline";
         const activityText = getMemberActivity(member);
 
         db.ref(`usersStatus/${member.user.id}`).set({
@@ -67,8 +75,8 @@ async function updateAllUsersStatus() {
           nickname: member.displayName,
           username: member.user.username,
           avatar: member.user.displayAvatarURL({ extension: 'png', size: 128 }) || null,
-          status: isOnline ? "online" : "offline",
-          activity: isOnline ? activityText : null
+          status: status, 
+          activity: status !== "offline" ? activityText : null
         });
       });
     } catch (e) {
@@ -82,23 +90,22 @@ client.once("ready", () => {
   updateAllUsersStatus();
 });
 
-/* 🎮 / 🎧 DETECTAR CAMBIOS DE ACTIVIDAD Y ESTADO */
+/* 🟢 DETECTAR CAMBIOS EN ESTADOS (Online, Luna, No Molestar, Actividades) */
 client.on("presenceUpdate", (oldPresence, newPresence) => {
   if (!newPresence || newPresence.user.bot) return;
   
   const member = newPresence.member;
   if (!member) return;
 
-  const status = newPresence.status;
-  const isOnline = status === "online" || status === "idle" || status === "dnd";
+  const status = newPresence.status || "offline"; 
   const activityText = getMemberActivity(member);
 
   db.ref(`usersStatus/${newPresence.user.id}`).update({
     nickname: member.displayName,
     username: newPresence.user.username,
     avatar: member.user.displayAvatarURL({ extension: 'png', size: 128 }),
-    status: isOnline ? "online" : "offline",
-    activity: isOnline ? activityText : null
+    status: status,
+    activity: status !== "offline" ? activityText : null
   });
 });
 
@@ -112,7 +119,6 @@ client.on("typingStart", (typing) => {
     time: Date.now()
   });
 
-  // Limpiar automáticamente de la base de datos después de 5 segundos de inactividad
   clearTimeout(typingTimeout);
   typingTimeout = setTimeout(() => {
     db.ref("typing/discord").remove();
@@ -123,7 +129,6 @@ client.on("typingStart", (typing) => {
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
-  // Si el usuario envía un mensaje, se asume que ya paró de escribir en ese instante
   db.ref("typing/discord").remove();
 
   let attachments = [];
