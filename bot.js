@@ -27,12 +27,29 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildPresences, // Requerido para ver quién está online/offline
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildPresences, 
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessageTyping // Obligatorio para detectar cuándo escriben
   ]
 });
 
-// Función para sincronizar todos los usuarios del servidor y su estado actual
+// Helper para extraer qué está haciendo el usuario (Música, juegos, etc)
+function getMemberActivity(member) {
+  if (!member.presence || !member.presence.activities.length) return null;
+  
+  // Buscar actividad principal (tipo 0 = Jugando, tipo 2 = Escuchando)
+  const activity = member.presence.activities[0];
+  if (activity.type === 2) {
+    return `🎧 Escuchando ${activity.name}`;
+  } else if (activity.type === 0) {
+    return `🎮 Jugando a ${activity.name}`;
+  } else if (activity.name) {
+    return `✨ ${activity.name}`;
+  }
+  return null;
+}
+
+// Sincronizar todos los estados y actividades al encender
 async function updateAllUsersStatus() {
   const guilds = client.guilds.cache.values();
   for (const guild of guilds) {
@@ -41,16 +58,17 @@ async function updateAllUsersStatus() {
       members.forEach(member => {
         if (member.user.bot) return;
 
-        // Determinar estado de presencia de Discord
         const presence = member.presence?.status;
         const isOnline = presence === "online" || presence === "idle" || presence === "dnd";
+        const activityText = getMemberActivity(member);
 
         db.ref(`usersStatus/${member.user.id}`).set({
           uid: member.user.id,
           nickname: member.displayName,
           username: member.user.username,
           avatar: member.user.displayAvatarURL({ extension: 'png', size: 128 }) || null,
-          status: isOnline ? "online" : "offline"
+          status: isOnline ? "online" : "offline",
+          activity: isOnline ? activityText : null
         });
       });
     } catch (e) {
@@ -64,38 +82,57 @@ client.once("ready", () => {
   updateAllUsersStatus();
 });
 
-/* 🟢 ESCUCHAR CAMBIOS DE ESTADO (Online/Offline) */
+/* 🎮 / 🎧 DETECTAR CAMBIOS DE ACTIVIDAD Y ESTADO */
 client.on("presenceUpdate", (oldPresence, newPresence) => {
   if (!newPresence || newPresence.user.bot) return;
   
   const member = newPresence.member;
+  if (!member) return;
+
   const status = newPresence.status;
   const isOnline = status === "online" || status === "idle" || status === "dnd";
+  const activityText = getMemberActivity(member);
 
   db.ref(`usersStatus/${newPresence.user.id}`).update({
-    nickname: member?.displayName || newPresence.user.username,
+    nickname: member.displayName,
     username: newPresence.user.username,
-    avatar: newPresence.user.displayAvatarURL({ extension: 'png', size: 128 }),
-    status: isOnline ? "online" : "offline"
+    avatar: member.user.displayAvatarURL({ extension: 'png', size: 128 }),
+    status: isOnline ? "online" : "offline",
+    activity: isOnline ? activityText : null
   });
 });
 
-/* 💬 DISCORD → FIREBASE (Mensajes + Multimedia) */
+/* ✍️ DETECTAR "ESCRIBIENDO..." DESDE DISCORD */
+let typingTimeout;
+client.on("typingStart", (typing) => {
+  if (typing.user.bot) return;
+
+  db.ref("typing/discord").set({
+    username: typing.user.username,
+    time: Date.now()
+  });
+
+  // Limpiar automáticamente de la base de datos después de 5 segundos de inactividad
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => {
+    db.ref("typing/discord").remove();
+  }, 5000);
+});
+
+/* 💬 DISCORD → FIREBASE */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
-  // Extraer fotos o videos adjuntos
+  // Si el usuario envía un mensaje, se asume que ya paró de escribir en ese instante
+  db.ref("typing/discord").remove();
+
   let attachments = [];
   if (message.attachments.size > 0) {
     message.attachments.forEach(att => {
       const isImage = att.contentType?.startsWith("image/");
       const isVideo = att.contentType?.startsWith("video/");
-      
-      if (isImage) {
-        attachments.push({ type: "image", url: att.url });
-      } else if (isVideo) {
-        attachments.push({ type: "video", url: att.url });
-      }
+      if (isImage) attachments.push({ type: "image", url: att.url });
+      if (isVideo) attachments.push({ type: "video", url: att.url });
     });
   }
 
@@ -112,19 +149,14 @@ client.on("messageCreate", async (message) => {
   });
 });
 
-/* 🌐 WEB → DISCORD (Mensajes limpios sin duplicados) */
+/* 🌐 WEB → DISCORD */
 db.ref("webMessages").on("child_added", async (snap) => {
   const data = snap.val();
   if (!data?.text) return;
-
-  // Evitar loops temporales
   if (Date.now() - data.time > 5000) return;
 
-  // Buscar un canal donde el bot pueda escribir
   const channel = client.channels.cache.find(c => c.isTextBased() && c.permissionsFor(client.user)?.has("SendMessages"));
-  
   if (channel) {
-    // Mandamos el texto limpio a Discord directamente
     await channel.send(data.text);
   }
 });
