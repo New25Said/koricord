@@ -6,35 +6,39 @@
 
 <style>
 body{margin:0;font-family:Arial, sans-serif;background:#313338;color:white;height:100vh;overflow:hidden;}
-#login{position:fixed;inset:0;background:#1e1f22;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:100;}
+#login{position:fixed;inset:0;background:#1e1f22;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:200;}
 input,button{padding:10px;border-radius:6px;border:none;outline:none;}
 button{background:#5865f2;color:white;cursor:pointer;font-weight:bold;}
 button:hover{background:#4752c4;}
 
-/* Estructura Principal de 3 Columnas */
+/* Estructura de 4 Columnas estilo Discord */
 .app-container{display:none;height:100vh;width:100vw;}
 
-/* 1. Barra Izquierda de Canales */
-.channels-sidebar{width:220px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:4px;border-right:1px solid #1f2023;overflow-y:auto;}
-.sidebar-title{font-size:12px;font-weight:bold;color:#949ba4;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-left:8px;}
+/* COLUMNA 1: Lista de Servidores (Extremo Izquierdo) */
+.guilds-sidebar{width:72px;background:#1e1f22;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:8px;border-right:1px solid #111214;overflow-y:auto;flex-shrink:0;}
+.guild-icon{width:48px;height:48px;border-radius:50%;background:#313338;color:#dbdee1;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold;cursor:pointer;transition:all 0.2s ease;overflow:hidden;position:relative;}
+.guild-icon img{width:100%;height:100%;object-fit:cover;}
+.guild-icon:hover, .guild-icon.active{border-radius:16px;background:#5865f2;color:white;}
+.guild-separator{width:32px;height:2px;background:#35373c;margin:4px 0;border-radius:1px;}
+
+/* COLUMNA 2: Lista de Canales */
+.channels-sidebar{width:220px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:4px;border-right:1px solid #1f2023;overflow-y:auto;flex-shrink:0;}
+.sidebar-title{font-size:12px;font-weight:bold;color:#949ba4;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .channel-btn{display:flex;align-items:center;gap:6px;padding:8px;border-radius:4px;color:#949ba4;cursor:pointer;font-size:14px;font-weight:500;}
 .channel-btn:hover{background:#35373c;color:#dbdee1;}
 .channel-btn.active{background:#404249;color:white;}
 .channel-btn::before{content:"#";font-size:18px;color:#80848e;margin-right:2px;}
 
-/* 2. Área Central de Chat */
-.chat-area{flex:1;display:flex;flex-direction:column;height:100vh;background:#313338;position:relative;}
+/* COLUMNA 3: Área Central de Chat */
+.chat-area{flex:1;display:flex;flex-direction:column;height:100vh;background:#313338;position:relative;min-width:0;}
 .messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:4px;}
 
-/* 3. Barra Derecha de Usuarios */
-.member-list{width:240px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:8px;border-left:1px solid #3f4147;overflow-y:auto;}
-.member-title{font-size:12px;font-weight:bold;color:#949ba4;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-left:8px;}
-.member-card{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:4px;cursor:pointer;}
-.member-card:hover{background:#35373c;}
+/* COLUMNA 4: Barra Derecha de Miembros */
+.member-list{width:240px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:8px;border-left:1px solid #3f4147;overflow-y:auto;flex-shrink:0;}
 
-/* Avatares y Estados */
+/* Componentes de Usuario y Avatares */
 .avatar-container{position:relative;width:38px;height:38px;flex-shrink:0;}
-.avatar{width:38px;height:38px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.avatar{width:38px;height:38px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:bold;}
 .avatar img{width:100%;height:100%;object-fit:cover;}
 
 .status-dot{position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;border:3px solid #2b2d31;}
@@ -44,6 +48,8 @@ button:hover{background:#4752c4;}
 .status-dnd::after{content:""; position:absolute; width:6px; height:2px; background:#2b2d31; top:50%; left:50%; transform:translate(-50%, -50%);}
 .status-offline{background:#80848e;}
 
+.member-card{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:4px;cursor:pointer;}
+.member-card:hover{background:#35373c;}
 .user-info{display:flex;flex-direction:column;min-width:0;flex:1;}
 .member-nick{font-weight:500;font-size:14px;color:#f2f3f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .member-user{font-size:11px;color:#949ba4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -52,7 +58,7 @@ button:hover{background:#4752c4;}
 /* Estilos de Mensajes */
 .msg{display:flex;gap:16px;padding:8px;border-radius:4px;}
 .msg:hover{background:#2e3035;}
-.msg-content{display:flex;flex-direction:column;gap:2px;flex:1;}
+.msg-content{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
 .top{display:flex;align-items:baseline;gap:8px;}
 .name{font-weight:bold;color:#f2f3f5;font-size:15px;}
 .sub-user{font-size:11px;color:#949ba4;}
@@ -67,15 +73,17 @@ button:hover{background:#4752c4;}
 .input-box input{width:100%;background:#383a40;color:#dbdee1;padding:12px;box-sizing:border-box;font-size:15px;border-radius:8px;border:none;}
 .typing-indicator{position:absolute;top:-18px;left:20px;font-size:12px;color:#abcdef;height:14px;}
 
-/* Modal de Perfil Detallado */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:150;align-items:center;justify-content:center;}
+/* Modal de Perfil Detallado (Bug Corregido de Posición) */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:250;align-items:center;justify-content:center;}
 .profile-modal{width:300px;background:#18191c;border-radius:8px;overflow:hidden;box-shadow:0 8px 16px rgba(0,0,0,0.5);}
 .profile-banner{height:60px;background:#5865f2;}
 .profile-header{padding:0 16px 16px 16px;position:relative;border-bottom:1px solid #232428;}
 .profile-modal-avatar{width:80px;height:80px;border-radius:50%;border:6px solid #18191c;background:#5865f2;overflow:hidden;position:absolute;top:-40px;left:16px;}
 .profile-modal-avatar img{width:100%;height:100%;object-fit:cover;}
-.profile-names{margin-top:48px;}
-.profile-nick{font-size:20px;font-weight:bold;color:white;}
+
+/* Corrección del margen para que la foto no tape el apodo */
+.profile-names{margin-top: 52px;} 
+.profile-nick{font-size:20px;font-weight:bold;color:white;word-break:break-all;}
 .profile-user{font-size:14px;color:#b5bac1;margin-top:2px;}
 .profile-body{padding:16px;display:flex;flex-direction:column;gap:12px;font-size:13px;}
 .profile-section-title{font-size:11px;font-weight:bold;color:#949ba4;text-transform:uppercase;letter-spacing:0.5px;}
@@ -94,13 +102,13 @@ button:hover{background:#4752c4;}
 </div>
 
 <div class="app-container" id="app">
-  <!-- 1. BARRA LATERAL DE CANALES -->
+  <div class="guilds-sidebar" id="guildsContainer"></div>
+
   <div class="channels-sidebar">
-    <div class="sidebar-title">Canales de Texto</div>
+    <div class="sidebar-title" id="currentGuildName">Cargando Server...</div>
     <div id="channels-container"></div>
   </div>
 
-  <!-- 2. FLUJO DE CHAT -->
   <div class="chat-area">
     <div id="messages" class="messages"></div>
     <div class="input-box">
@@ -109,14 +117,12 @@ button:hover{background:#4752c4;}
     </div>
   </div>
   
-  <!-- 3. BARRA LATERAL DE MIEMBROS -->
-  <div class="member-list" id="memberList">
+  <div class="member-list">
     <div class="member-title">Miembros</div>
     <div id="members-container"></div>
   </div>
 </div>
 
-<!-- MODAL DE PERFIL DETALLADO -->
 <div class="modal-overlay" id="profileModal" onclick="closeProfile()">
   <div class="profile-modal" onclick="event.stopPropagation()">
     <div class="profile-banner"></div>
@@ -145,7 +151,7 @@ button:hover{background:#4752c4;}
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 import { getDatabase, ref, push, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
 const firebaseConfig = {
@@ -163,6 +169,7 @@ const db = getDatabase(app);
 
 let messages = [];
 let cacheUsers = {};
+let currentGuildId = "";
 let currentChannelId = "";
 let unreadCount = 0;
 let isTabFocused = true;
@@ -180,8 +187,7 @@ function playNotificationSound() {
     osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08);
     gain.gain.setValueAtTime(0.1, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
+    osc.connect(gain); gain.connect(ctx.destination);
     osc.start(); osc.stop(ctx.currentTime + 0.3);
   } catch(e){}
 }
@@ -196,20 +202,18 @@ window.check = () => {
   }
 };
 
-// Renderizado de mensajes filtrado por el canal activo
-function render(){
+function renderMessages(){
   const box = document.getElementById("messages");
   box.innerHTML = "";
   
-  // Filtrar mensajes pertenecientes al canal actual
   const filtered = messages.filter(m => m.channelId === currentChannelId);
   filtered.sort((a,b)=>a.timestamp-b.timestamp);
 
   for(const m of filtered){
     const div = document.createElement("div");
     div.className="msg";
-
     const avatarHtml = m.avatar ? `<img src="${m.avatar}">` : (m.nickname || "K")[0];
+    
     let attachmentHtml = "";
     if(m.attachments){
       for(const att of m.attachments){
@@ -234,36 +238,119 @@ function render(){
   box.scrollTop = box.scrollHeight;
 }
 
-// Cargar canales desde Firebase
-onValue(ref(db, "channels"), snap => {
-  const container = document.getElementById("channels-container");
+// 1. Escuchar Servidores e Iconos en Tiempo Real
+onValue(ref(db, "guilds"), snap => {
+  const container = document.getElementById("guildsContainer");
   container.innerHTML = "";
-  const channels = snap.val();
-  if(!channels) return;
+  const guilds = snap.val();
+  if(!guilds) return;
 
-  const list = Object.values(channels);
-  if(!currentChannelId && list.length > 0) {
-    currentChannelId = list[0].id; // Forzar primer canal activo por defecto
-  }
+  const list = Object.values(guilds);
+  if(!currentGuildId && list.length > 0) currentGuildId = list[0].id;
 
-  list.forEach(ch => {
-    const btn = document.createElement("div");
-    btn.className = `channel-btn ${ch.id === currentChannelId ? 'active' : ''}`;
-    btn.innerText = ch.name;
-    btn.onclick = () => {
-      currentChannelId = ch.id;
-      document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      render();
+  list.forEach(g => {
+    const iconBtn = document.createElement("div");
+    iconBtn.className = `guild-icon ${g.id === currentGuildId ? 'active' : ''}`;
+    iconBtn.title = g.name;
+    
+    if(g.iconUrl) {
+      iconBtn.innerHTML = `<img src="${g.iconUrl}" alt="${g.name}">`;
+    } else {
+      iconBtn.innerText = g.name.split(" ").map(w => w[0]).join("").substring(0,3);
+    }
+
+    iconBtn.onclick = () => {
+      currentGuildId = g.id;
+      document.querySelectorAll('.guild-icon').forEach(i => i.classList.remove('active'));
+      iconBtn.classList.add('active');
+      
+      // Reiniciar canales al cambiar de servidor
+      currentChannelId = ""; 
+      loadChannelsAndMembers();
     };
-    container.appendChild(btn);
+    container.appendChild(iconBtn);
   });
-  render();
+  
+  loadChannelsAndMembers();
 });
+
+// 2. Cargar Canales y Miembros filtrados por Servidor Activo
+function loadChannelsAndMembers() {
+  if(!currentGuildId) return;
+
+  // Cargar nombre del servidor actual en el encabezado
+  onValue(ref(db, `guilds/${currentGuildId}`), gSnap => {
+    const g = gSnap.val();
+    if(g) document.getElementById("currentGuildName").innerText = g.name;
+  });
+
+  // Escuchar canales de este servidor
+  onValue(ref(db, `channels/${currentGuildId}`), snap => {
+    const container = document.getElementById("channels-container");
+    container.innerHTML = "";
+    const channels = snap.val();
+    if(!channels) return;
+
+    const list = Object.values(channels);
+    if(!currentChannelId && list.length > 0) currentChannelId = list[0].id;
+
+    list.forEach(ch => {
+      const btn = document.createElement("div");
+      btn.className = `channel-btn ${ch.id === currentChannelId ? 'active' : ''}`;
+      btn.innerText = ch.name;
+      btn.onclick = () => {
+        currentChannelId = ch.id;
+        document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderMessages();
+      };
+      container.appendChild(btn);
+    });
+    renderMessages();
+  });
+
+  // Escuchar miembros de este servidor
+  onValue(ref(db, `usersStatus/${currentGuildId}`), snap => {
+    const container = document.getElementById("members-container");
+    container.innerHTML = "";
+    const users = snap.val();
+    if(!users) return;
+    cacheUsers = users;
+
+    const sortedUsers = Object.values(users).sort((a,b) => (b.status !== "offline") - (a.status !== "offline"));
+
+    for(const u of sortedUsers){
+      const card = document.createElement("div");
+      card.className = "member-card";
+      card.onclick = () => openProfile(u.uid);
+      
+      const userAvatar = u.avatar ? `<img src="${u.avatar}">` : u.nickname[0];
+      let statusClass = "status-offline";
+      if(u.status === "online") statusClass = "status-online";
+      if(u.status === "idle") statusClass = "status-idle";
+      if(u.status === "dnd") statusClass = "status-dnd";
+
+      let activityHtml = u.status !== "offline" && u.activity ? `<span class="member-activity">${u.activity}</span>` : "";
+
+      card.innerHTML = `
+        <div class="avatar-container">
+          <div class="avatar">${userAvatar}</div>
+          <div class="status-dot ${statusClass}"></div>
+        </div>
+        <div class="user-info">
+          <span class="member-nick">${u.nickname}</span>
+          <span class="member-user">@${u.username}</span>
+          ${activityHtml}
+        </div>
+      `;
+      container.appendChild(card);
+    }
+  });
+}
 
 onChildAdded(ref(db,"discordMessages"), snap=>{
   messages.push(snap.val());
-  render();
+  renderMessages();
   if (!isTabFocused) { unreadCount++; document.title = `(${unreadCount}) 🔴 KoriCord`; playNotificationSound(); }
 });
 
@@ -276,48 +363,9 @@ onChildAdded(ref(db,"webMessages"), snap=>{
     timestamp: data.time,
     channelId: data.channelId
   });
-  render();
+  renderMessages();
 });
 
-// Lista de miembros e interactividad de clic de perfil
-onValue(ref(db, "usersStatus"), snap => {
-  const container = document.getElementById("members-container");
-  container.innerHTML = "";
-  const users = snap.val();
-  if(!users) return;
-  cacheUsers = users; 
-
-  const sortedUsers = Object.values(users).sort((a,b) => (b.status !== "offline") - (a.status !== "offline"));
-
-  for(const u of sortedUsers){
-    const card = document.createElement("div");
-    card.className = "member-card";
-    card.onclick = () => openProfile(u.uid);
-    
-    const userAvatar = u.avatar ? `<img src="${u.avatar}">` : u.nickname[0];
-    let statusClass = "status-offline";
-    if(u.status === "online") statusClass = "status-online";
-    if(u.status === "idle") statusClass = "status-idle";
-    if(u.status === "dnd") statusClass = "status-dnd";
-
-    let activityHtml = u.status !== "offline" && u.activity ? `<span class="member-activity">${u.activity}</span>` : "";
-
-    card.innerHTML = `
-      <div class="avatar-container">
-        <div class="avatar">${userAvatar}</div>
-        <div class="status-dot ${statusClass}"></div>
-      </div>
-      <div class="user-info">
-        <span class="member-nick">${u.nickname}</span>
-        <span class="member-user">@${u.username}</span>
-        ${activityHtml}
-      </div>
-    `;
-    container.appendChild(card);
-  }
-});
-
-// Modales de Perfil
 window.openProfile = (uid) => {
   const u = cacheUsers[uid];
   if(!u) return;
@@ -342,11 +390,8 @@ window.openProfile = (uid) => {
   document.getElementById("profileModal").style.display = "flex";
 };
 
-window.closeProfile = () => {
-  document.getElementById("profileModal").style.display = "none";
-};
+window.closeProfile = () => { document.getElementById("profileModal").style.display = "none"; };
 
-// Escribiendo...
 onValue(ref(db, "typing/discord"), snap => {
   const typingBox = document.getElementById("typing");
   const data = snap.val();
@@ -369,9 +414,7 @@ window.sendMessage = async function(){
   document.getElementById("msg").value="";
 };
 
-document.getElementById("msg").addEventListener("keydown",(e)=>{
-  if(e.key==="Enter") sendMessage();
-});
+document.getElementById("msg").addEventListener("keydown",(e)=>{ if(e.key==="Enter") sendMessage(); });
 </script>
 </body>
 </html>
