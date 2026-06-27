@@ -17,9 +17,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static("public"));
-app.listen(PORT, () => {
-  console.log("🌐 Web activa en Render");
-});
+app.listen(PORT, () => { console.log("🌐 Web activa en Render"); });
 
 /* 🤖 DISCORD BOT */
 const client = new Client({
@@ -33,78 +31,95 @@ const client = new Client({
   ]
 });
 
+// Helper avanzado para limpiar strings de actividad (Remueve strings de emojis custom rotos de Discord)
 function getMemberActivity(member) {
   if (!member.presence || !member.presence.activities.length) return null;
   for (const activity of member.presence.activities) {
-    if (activity.name === "Custom Status") return activity.state ? `✨ ${activity.state}` : null;
+    if (activity.name === "Custom Status") {
+      if(!activity.state) return null;
+      // Reemplaza formatos <:nombre:id> por un emoji limpio ✨
+      let cleanState = activity.state.replace(/<a?:.+?:\d+>/g, '✨');
+      return `✨ ${cleanState}`;
+    }
     if (activity.type === 2) return `🎧 Escuchando ${activity.name}`;
     if (activity.type === 0) return `🎮 Jugando a ${activity.name}`;
   }
   return member.presence.activities[0].name ? `✨ ${member.presence.activities[0].name}` : null;
 }
 
-// Sincronizar Canales del Servidor y Perfiles Detallados de Usuarios
-async function syncGuildData() {
+// Sincronización Estructurada Completa por Servidor
+async function syncDeepDiscordStructure() {
   const guilds = client.guilds.cache.values();
+  
+  // Limpiar ramas viejas para reconstruir la estructura limpia multiserver
+  await db.ref("guilds").remove();
+  await db.ref("channels").remove();
+  await db.ref("usersStatus").remove();
+
   for (const guild of guilds) {
     try {
-      // 1. Sincronizar todos los canales de texto de Discord hacia Firebase
+      // 1. Guardar metadatos del Servidor (Nombre e Icono)
+      const iconUrl = guild.iconURL({ extension: 'png', size: 128 }) || null;
+      await db.ref(`guilds/${guild.id}`).set({
+        id: guild.id,
+        name: guild.name,
+        iconUrl: iconUrl
+      });
+
+      // 2. Guardar canales asociados específicamente a este Servidor
       const channels = await guild.channels.fetch();
       channels.forEach(ch => {
         if (ch.isTextBased()) {
-          db.ref(`channels/${ch.id}`).set({
+          db.ref(`channels/${guild.id}/${ch.id}`).set({
             id: ch.id,
             name: ch.name
           });
         }
       });
 
-      // 2. Sincronizar perfiles detallados de los miembros
+      // 3. Guardar miembros con sus roles locales del Servidor
       const members = await guild.members.fetch({ withPresences: true });
       members.forEach(member => {
         if (member.user.bot) return;
 
         const status = member.presence?.status || "offline";
         const activityText = getMemberActivity(member);
-        
-        // Obtener lista de nombres de sus roles (excepto @everyone)
-        const roles = member.roles.cache
-          .filter(r => r.name !== "@everyone")
-          .map(r => r.name);
+        const roles = member.roles.cache.filter(r => r.name !== "@everyone").map(r => r.name);
 
-        db.ref(`usersStatus/${member.user.id}`).set({
+        db.ref(`usersStatus/${guild.id}/${member.user.id}`).set({
           uid: member.user.id,
           nickname: member.displayName,
           username: member.user.username,
           avatar: member.user.displayAvatarURL({ extension: 'png', size: 128 }) || null,
           status: status,
           activity: status !== "offline" ? activityText : null,
-          joinedAt: member.user.createdAt.getTime(), // Fecha de creación de su cuenta de Discord
+          joinedAt: member.user.createdAt.getTime(),
           roles: roles
         });
       });
     } catch (e) {
-      console.error("Error en sincronización profunda:", e);
+      console.error(`Error sincronizando servidor ${guild.name}:`, e);
     }
   }
 }
 
 client.once("ready", () => {
   console.log(`🤖 Logueado como ${client.user.tag}`);
-  syncGuildData();
+  syncDeepDiscordStructure();
 });
 
-/* 🟢 ACTUALIZAR PERFIL / ACTIVIDADES AL INSTANTE */
+/* 🟢 DETECTAR CAMBIOS DE PRESENCIA / JUEGOS EN VIVO */
 client.on("presenceUpdate", (oldPresence, newPresence) => {
   if (!newPresence || newPresence.user.bot) return;
   const member = newPresence.member;
   if (!member) return;
 
+  const guildId = newPresence.guild.id;
   const status = newPresence.status || "offline";
   const activityText = getMemberActivity(member);
   const roles = member.roles.cache.filter(r => r.name !== "@everyone").map(r => r.name);
 
-  db.ref(`usersStatus/${newPresence.user.id}`).update({
+  db.ref(`usersStatus/${guildId}/${newPresence.user.id}`).update({
     nickname: member.displayName,
     username: newPresence.user.username,
     avatar: member.user.displayAvatarURL({ extension: 'png', size: 128 }),
@@ -114,7 +129,7 @@ client.on("presenceUpdate", (oldPresence, newPresence) => {
   });
 });
 
-/* ✍️ DETECTAR TYPING */
+/* ✍️ TYPING INDICATOR */
 let typingTimeout;
 client.on("typingStart", (typing) => {
   if (typing.user.bot) return;
@@ -123,7 +138,7 @@ client.on("typingStart", (typing) => {
   typingTimeout = setTimeout(() => { db.ref("typing/discord").remove(); }, 5000);
 });
 
-/* 💬 DISCORD → FIREBASE (Guardando a qué canal pertenece cada mensaje) */
+/* 💬 MENSAJES DISCORD → WEB */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
   db.ref("typing/discord").remove();
@@ -144,12 +159,12 @@ client.on("messageCreate", async (message) => {
     avatar: message.author.displayAvatarURL({ extension: 'png', size: 128 }),
     text: message.content,
     attachments: attachments,
-    channelId: message.channel.id, // ID del canal de origen
+    channelId: message.channel.id, 
     timestamp: Date.now()
   });
 });
 
-/* 🌐 WEB → DISCORD (Enviando el mensaje exactamente al canal en el que está Kori en la web) */
+/* 🌐 WEB → DISCORD */
 db.ref("webMessages").on("child_added", async (snap) => {
   const data = snap.val();
   if (!data?.text || !data.channelId) return;
@@ -161,7 +176,7 @@ db.ref("webMessages").on("child_added", async (snap) => {
       await channel.send(data.text);
     }
   } catch (err) {
-    console.error("Error reenviando mensaje al canal:", err);
+    console.error("Error al retransmitir mensaje:", err);
   }
 });
 
