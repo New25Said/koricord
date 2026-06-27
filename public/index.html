@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -13,7 +12,9 @@ button{background:#5865f2;color:white;cursor:pointer;}
 .chat{display:none;height:100vh;flex-direction:column;}
 .messages{flex:1;overflow-y:auto;padding:12px;}
 .msg{display:flex;gap:10px;padding:8px;}
-.avatar{width:38px;height:38px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;}
+/* Se añade overflow: hidden y object-fit para que las imágenes se vean perfectas */
+.avatar{width:38px;height:38px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.avatar img{width:100%;height:100%;object-fit:cover;}
 .text{color:#dcddde;}
 .top{display:flex;gap:8px;}
 .name{font-weight:bold;}
@@ -37,7 +38,7 @@ button{background:#5865f2;color:white;cursor:pointer;}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded, set } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
 const firebaseConfig = {
 apiKey:"AIzaSyARq5j8Kf9p4SYj4sj3167BjVD-Q4KczQE",
@@ -73,8 +74,13 @@ for(const m of messages){
 const div = document.createElement("div");
 div.className="msg";
 
+// Si el mensaje tiene avatar (Discord), muestra la imagen. Si no, muestra la inicial.
+const avatarHtml = m.avatar 
+    ? `<img src="${m.avatar}" alt="${m.nickname || m.username}">`
+    : (m.nickname || "U")[0];
+
 div.innerHTML = `
-<div class="avatar">${(m.nickname||"U")[0]}</div>
+<div class="avatar">${avatarHtml}</div>
 <div>
 <div class="top">
 <span class="name">${m.nickname||m.username}</span>
@@ -84,6 +90,8 @@ div.innerHTML = `
 </div>`;
 box.appendChild(div);
 }
+// Auto-scroll al enviar o recibir mensajes
+box.scrollTop = box.scrollHeight;
 }
 
 onChildAdded(ref(db,"discordMessages"), snap=>{
