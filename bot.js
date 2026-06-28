@@ -1,5 +1,5 @@
-const { Client, GatewayIntentBits, Partials } = require('discord.js');
-const admin = require('firebase-admin');
+import { Client, GatewayIntentBits, Partials } from 'discord.js';
+import admin from 'firebase-admin';
 
 // 1. Inicialización Segura de Firebase Admin
 // Recuerda que en el panel de Render debes tener tu variable FIREBASE_SERVICE_ACCOUNT con el JSON comprimido
