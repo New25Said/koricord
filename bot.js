@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits } from "discord.js";
+import { Client, GatewayIntentBits, PresenceUpdateStatus } from "discord.js";
 import express from "express";
 import admin from "firebase-admin";
 
@@ -26,11 +26,13 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildMembers
   ]
 });
 
-// Sincronizar canales e información del servidor en tiempo real
+// Sincronizar canales e info del servidor
 async function syncServerData() {
   const guild = client.guilds.cache.first();
   if (!guild) return;
@@ -46,6 +48,33 @@ async function syncServerData() {
   });
 }
 
+// Sincronizar Miembros y sus Estados reales
+async function syncMembers() {
+  const guild = client.guilds.cache.first();
+  if (!guild) return;
+
+  try {
+    const membersFetch = await guild.members.fetch({ withPresences: true });
+    const membersList = membersFetch.map(m => {
+      let status = m.presence?.status || "offline";
+      if (status === "invisible") status = "offline";
+      
+      return {
+        id: m.user.id,
+        username: m.user.username,
+        nickname: m.displayName,
+        avatar: m.user.displayAvatarURL({ extension: "png", size: 128 }),
+        status: status, // online, idle, dnd, offline
+        isBot: m.user.bot
+      };
+    });
+
+    await db.ref("serverMembers").set(membersList);
+  } catch (err) {
+    console.error("Error al sincronizar miembros:", err);
+  }
+}
+
 client.once("ready", async () => {
   console.log(`🤖 Logueado como ${client.user.tag}`);
   
@@ -55,16 +84,22 @@ client.once("ready", async () => {
       avatar: client.user.displayAvatarURL({ extension: "png", size: 128 })
     });
     await syncServerData();
+    await syncMembers();
   } catch (err) {
     console.error("Error en inicialización:", err);
   }
 });
 
-// Escuchas de eventos del servidor para cambios en tiempo real
+// Eventos en tiempo real para cambios de Servidor, Canales o Estados de Miembros
 client.on("guildUpdate", syncServerData);
 client.on("channelCreate", syncServerData);
 client.on("channelDelete", syncServerData);
 client.on("channelUpdate", syncServerData);
+
+client.on("presenceUpdate", syncMembers);
+client.on("guildMemberAdd", syncMembers);
+client.on("guildMemberRemove", syncMembers);
+client.on("guildMemberUpdate", syncMembers);
 
 /* 💬 DISCORD → FIREBASE */
 client.on("messageCreate", async (message) => {
