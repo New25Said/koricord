@@ -3,10 +3,15 @@
   --bg-sidebar: #1e1f22;
   --bg-guilds: #111214;
   --bg-chat: #2b2d31;
+  --bg-members: #1e1f22;
   --accent: #5865f2;
   --accent-glow: rgba(88, 101, 242, 0.4);
   --text-main: #f2f3f5;
   --text-muted: #949ba4;
+  --online: #23a55a;
+  --idle: #f0b232;
+  --dnd: #f23f43;
+  --offline: #80848e;
 }
 
 body {
@@ -51,13 +56,13 @@ body {
 .error-msg { color: #f23f43; font-size: 13px; margin-top: 12px; display: none; }
 
 /* 🏢 DISCORD LAYOUT */
-.app-container { display: flex; width: 100vw; height: 100vh; }
+.app-container { display: flex; width: 100vw; height: 100vh; flex: 1; }
 
-/* BARRA DE ICONOS (IZQUIERDA) */
+/* BARRA DE ICONOS */
 .guilds-sidebar {
   width: 72px; background: var(--bg-guilds);
   display: flex; flex-direction: column; align-items: center; padding-top: 12px;
-  border-right: 1px solid rgba(0,0,0,0.2);
+  border-right: 1px solid rgba(0,0,0,0.2); flex-shrink: 0;
 }
 .guild-icon-wrap { position: relative; cursor: pointer; }
 .guild-icon {
@@ -68,7 +73,6 @@ body {
 .guild-icon img { width: 100%; height: 100%; object-fit: cover; }
 .guild-icon-wrap:hover .guild-icon { border-radius: 16px; background: var(--accent); }
 
-/* TOOLTIP AL PASAR EL CURSOR */
 .guild-tooltip {
   position: absolute; left: 80px; top: 50%; transform: translateY(-50%);
   background: #111214; color: var(--text-main); padding: 8px 12px;
@@ -79,28 +83,44 @@ body {
 .guild-icon-wrap:hover .guild-tooltip { visibility: visible; opacity: 1; left: 88px; }
 
 /* SIDEBAR DE CANALES */
-.sidebar { width: 240px; background: var(--bg-sidebar); display: flex; flex-direction: column; }
+.sidebar { width: 240px; background: var(--bg-sidebar); display: flex; flex-direction: column; flex-shrink: 0; }
 .sidebar-header { padding: 16px; border-bottom: 1px solid rgba(0,0,0,0.2); }
 .sidebar-header h2 { margin: 0; font-size: 16px; font-weight: bold; }
 .sidebar-header .sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
 .channels-list { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+
+.channel-wrap { position: relative; display: flex; align-items: center; }
 .channel-btn {
-  display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+  flex: 1; display: flex; align-items: center; gap: 6px; padding: 8px 12px;
   border-radius: 4px; cursor: pointer; color: var(--text-muted); font-size: 15px; transition: 0.2s;
 }
 .channel-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
 .channel-btn.active { background: rgba(255,255,255,0.1); color: var(--text-main); font-weight: 500; }
 .channel-btn::before { content: "#"; font-size: 18px; color: var(--text-muted); opacity: 0.6; }
 
+/* PUNTITO ROJO DE NUEVO MENSAJE EN CANAL */
+.unread-badge {
+  position: absolute; right: 10px; width: 8px; height: 8px;
+  background-color: #f23f43; border-radius: 50%; display: none;
+  box-shadow: 0 0 6px #f23f43;
+}
+
 /* CHAT AREA */
 .chat { flex: 1; background: var(--bg-chat); display: flex; flex-direction: column; }
 .chat-header {
-  height: 48px; display: flex; align-items: center; padding: 0 16px;
-  border-bottom: 1px solid rgba(0,0,0,0.2); font-weight: bold; gap: 8px;
+  height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.2); font-weight: bold; flex-shrink: 0;
 }
+.header-left { display: flex; align-items: center; gap: 8px; }
 .chat-header .hashtag { color: var(--text-muted); font-size: 20px; }
+.toggle-members-btn {
+  background: transparent; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px;
+  border-radius: 4px; font-size: 13px; font-weight: 500; transition: 0.2s; color: var(--text-main);
+}
+.toggle-members-btn:hover { background: rgba(255,255,255,0.1); border-color: transparent; }
+
 .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-.msg { display: flex; gap: 16px; padding: 4px 8px; border-radius: 4px; transition: background 0.1s; }
+.msg { display: flex; gap: 16px; padding: 4px 8px; border-radius: 4px; transition: background 0.1s; position: relative; }
 .msg:hover { background: rgba(0, 0, 0, 0.08); }
 .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; }
 .content { display: flex; flex-direction: column; }
@@ -110,16 +130,52 @@ body {
 .time { font-size: 11px; color: var(--text-muted); }
 .text { color: #dbdee1; margin-top: 4px; font-size: 15px; line-height: 1.375; white-space: pre-wrap; word-break: break-word; }
 
-/* INDICADORES */
+/* 🔴 RAYA ROJA DE MENSAJE NUEVO NO LEÍDO */
+.unread-divider {
+  display: flex; align-items: center; margin: 8px 0; position: relative;
+}
+.unread-divider::before {
+  content: ""; flex: 1; height: 1px; background-color: #f23f43;
+}
+.unread-divider span {
+  background-color: #f23f43; color: white; padding: 2px 8px;
+  border-radius: 4px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;
+}
+
+/* MIEMBROS (DERECHA) */
+.members-sidebar {
+  width: 240px; background: var(--bg-members); display: flex; flex-direction: column;
+  border-left: 1px solid rgba(0,0,0,0.2); flex-shrink: 0; transition: width 0.2s, opacity 0.2s;
+}
+.members-sidebar.hidden { width: 0; opacity: 0; overflow: hidden; border-left: none; }
+.members-title { padding: 16px 16px 8px 16px; font-size: 12px; font-weight: bold; color: var(--text-muted); letter-spacing: 0.5px; }
+.members-list { flex: 1; padding: 0 8px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
+
+.member-item {
+  display: flex; align-items: center; gap: 12px; padding: 6px 8px; border-radius: 4px; cursor: pointer; transition: 0.2s;
+}
+.member-item:hover { background: rgba(255,255,255,0.05); }
+.member-avatar-container { position: relative; width: 32px; height: 32px; }
+.member-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
+
+/* 🟢 INDICADOR DE ESTADOS DISCORD */
+.status-dot {
+  position: absolute; bottom: -2px; right: -2px; width: 10px; height: 10px;
+  border-radius: 50%; border: 2px solid var(--bg-members);
+}
+.status-dot.online { background-color: var(--online); }
+.status-dot.idle { background-color: var(--idle); }
+.status-dot.dnd { background-color: var(--dnd); }
+.status-dot.offline { background-color: var(--offline); }
+
+.member-info { display: flex; flex-direction: column; overflow: hidden; }
+.member-name { font-size: 14px; font-weight: 500; color: #dbdee1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.member-sub { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* INDICADORES ADICIONALES */
 .typing-indicator { padding: 0 16px; font-size: 12px; color: var(--text-muted); height: 20px; }
 .input { padding: 0 16px 24px 16px; display: flex; gap: 10px; background: transparent; }
-input {
-  flex: 1; padding: 12px; border: none; border-radius: 8px;
-  background: #383a40; color: white; font-size: 15px;
-}
+input { flex: 1; padding: 12px; border: none; border-radius: 8px; background: #383a40; color: white; font-size: 15px; }
 input:focus { outline: none; }
-button {
-  padding: 0 20px; border: none; border-radius: 8px;
-  background: var(--accent); color: white; cursor: pointer; font-weight: 500;
-}
+button { padding: 0 20px; border: none; border-radius: 8px; background: var(--accent); color: white; cursor: pointer; font-weight: 500; }
 button:hover { background: #4752c4; }
