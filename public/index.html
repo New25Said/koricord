@@ -8,17 +8,20 @@
 </head>
 <body>
 
+  <!-- 🔐 PANTALLA DE LOGIN -->
   <div id="loginScreen" class="login-screen">
     <div class="login-box">
-      <h3>¿Eres Kori?</h3> [cite: 19]
+      <h3>¿Eres Kori?</h3>
       <input id="loginInput" type="password" placeholder="Escribe la clave secreta...">
-      <button onclick="checkLogin()">Entrar</button> [cite: 14]
-      <div id="errorMsg" class="error-msg">Esto es solo para kori, intenta otra vez</div> [cite: 20]
+      <button onclick="checkLogin()">Entrar</button>
+      <div id="errorMsg" class="error-msg">Esto es solo para kori, intenta otra vez</div>
     </div>
   </div>
 
+  <!-- 🏢 INTERFAZ PRINCIPAL -->
   <div class="app-container">
     
+    <!-- Servidores (Estilo Discord de iconos a la izquierda) -->
     <div class="guilds-sidebar">
       <div class="guild-icon-wrap" id="guildWrapper">
         <div class="guild-icon" id="guildIcon">K</div>
@@ -26,33 +29,37 @@
       </div>
     </div>
 
-    <div class="sidebar"> [cite: 8]
+    <!-- Canales -->
+    <div class="sidebar">
       <div class="sidebar-header">
-        <h2 id="serverTitle">KoriCord</h2> [cite: 8]
-        <div class="sub">2PyM 🌐</div> [cite: 8]
+        <h2 id="serverTitle">KoriCord</h2>
+        <div class="sub">2PyM 🌐</div>
       </div>
       <div class="channels-list" id="channelsList">
-        </div>
+        <!-- Los canales se inyectan en tiempo real -->
+      </div>
     </div>
 
-    <div class="chat"> [cite: 8]
+    <!-- Chat -->
+    <div class="chat">
       <div class="chat-header">
         <span class="hashtag">#</span>
         <span id="currentChannelName">general</span>
       </div>
       
-      <div id="messages" class="messages"></div> [cite: 8]
+      <div id="messages" class="messages"></div>
       
       <div id="typing" class="typing-indicator"></div>
       
-      <div class="input"> [cite: 10]
-        <input id="msg" placeholder="Escribe a Discord..."> [cite: 10]
-        <button onclick="sendMessage()">Enviar</button> [cite: 10]
+      <div class="input">
+        <input id="msg" placeholder="Escribe a Discord...">
+        <button onclick="sendMessage()">Enviar</button>
       </div>
     </div>
 
   </div>
 
+  <!-- Lógica de Firebase y de la App -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
