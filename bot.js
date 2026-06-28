@@ -1,8 +1,28 @@
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
 import admin from 'firebase-admin';
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// 1. Inicialización Segura de Firebase Admin
-// Recuerda que en el panel de Render debes tener tu variable FIREBASE_SERVICE_ACCOUNT con el JSON comprimido
+// 1. Configuración de rutas para ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// 2. SERVIDOR WEB EXPRESS (La clave para un deploy ultra rápido en Render)
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Render detecta esto de inmediato y aprueba el deploy
+app.listen(PORT, () => {
+  console.log(`⚡ [Web] Servidor activo en puerto ${PORT}. Deploy exitoso.`);
+});
+
+// 3. INICIALIZACIÓN SEGURA DE FIREBASE
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -10,17 +30,14 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT) {
       credential: admin.credential.cert(serviceAccount),
       databaseURL: "https://koricord-a5f4e-default-rtdb.firebaseio.com"
     });
-    console.log("[Bot Core] Firebase Admin inicializado correctamente.");
+    console.log("🔥 [Firebase] Conectado correctamente.");
   } catch (err) {
-    console.error("[Bot Core] Error crítico al parsear las credenciales de Firebase:", err);
+    console.error("❌ [Firebase] Error parseando credenciales:", err);
   }
-} else {
-  console.error("[Bot Core] ERROR: No se encontró la variable de entorno FIREBASE_SERVICE_ACCOUNT.");
 }
-
 const db = admin.database();
 
-// 2. Configuración de los Intents necesarios para capturar mensajes, miembros y estados
+// 4. CONFIGURACIÓN DEL BOT DE DISCORD
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -30,21 +47,18 @@ const client = new Client({
     GatewayIntentBits.GuildPresences,
     GatewayIntentBits.DirectMessages
   ],
-  partials: [Partials.Channel] // Requerido para poder capturar eventos en Mensajes Directos (DMs)
+  partials: [Partials.Channel]
 });
 
-// Evento de confirmación cuando el bot se conecta exitosamente
 client.once('ready', () => {
-  console.log(`[Bot Core] ¡Bot listo y conectado a Discord como: ${client.user.tag}!`);
+  console.log(`🤖 [Discord] ${client.user.tag} en línea y operando.`);
 });
 
-// 3. Sincronización de Mensajes desde Discord hacia Firebase (Servidores y Canales)
+// 5. SINCRONIZACIÓN DE MENSAJES Y ARCHIVOS MULTIMEDIA
 client.on('messageCreate', async (message) => {
-  // Evitar que el bot se responda a sí mismo o a otros bots para prevenir bucles infinitos
   if (message.author.bot) return;
 
   try {
-    // Procesar y capturar archivos multimedia adjuntos (imágenes o videos)
     const attachmentsArray = [];
     if (message.attachments.size > 0) {
       message.attachments.forEach(att => {
@@ -56,13 +70,12 @@ client.on('messageCreate', async (message) => {
       });
     }
 
-    // Generar una nueva clave única dentro del nodo 'discordMessages' de Firebase
-    const msgRef = db.ref('discordMessages').push();
-    await msgRef.set({
+    // Usamos un nodo temporary para inyectar el mensaje en tiempo real
+    const temporaryRef = db.ref('discordMessages').push();
+    await temporaryRef.set({
       id: message.id,
       text: message.content,
       username: message.author.username,
-      // Si el mensaje viene de un servidor toma su apodo, si no, usa su nombre de usuario global
       nickname: message.member ? message.member.displayName : message.author.username,
       avatar: message.author.displayAvatarURL({ extension: 'png' }),
       timestamp: message.createdTimestamp,
@@ -71,14 +84,13 @@ client.on('messageCreate', async (message) => {
     });
 
   } catch (error) {
-    console.error('[Bot Core] Error al intentar guardar el mensaje en Firebase:', error);
+    console.error('[Error] Fallo al guardar en Firebase:', error);
   }
 });
 
-// 4. Conexión e Inicio de sesión protegido
-// Lee de manera interna el token desde el panel de control de Render (Invisible en el código)
+// 6. LOGIN PROTEGIDO
 if (process.env.DISCORD_TOKEN) {
   client.login(process.env.DISCORD_TOKEN);
 } else {
-  console.error("[Bot Core] ERROR CRÍTICO: Falta configurar la variable de entorno DISCORD_TOKEN en el hosting.");
+  console.error("❌ [Error] No se detectó DISCORD_TOKEN en las variables de entorno.");
 }
