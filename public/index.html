@@ -21,17 +21,23 @@ button:hover{background:#4752c4;}
 .guild-icon:hover, .guild-icon.active{border-radius:16px;background:#5865f2;color:white;}
 .guild-separator{width:32px;height:2px;background:#35373c;margin:4px 0;border-radius:1px;}
 
+/* Icono de Mensajes Directos personalizado */
+.dm-icon-svg {width:26px; height:26px; fill:currentColor;}
+
 .guild-badge {position:absolute;bottom:0;right:0;width:14px;height:14px;background:#f23f43;border-radius:50%;border:2px solid #1e1f22;display:none;}
 .guild-icon.unread .guild-badge {display:block;}
 
-/* COLUMNA 2: Lista de Canales */
+/* COLUMNA 2: Lista de Canales / Lista de MDs privados */
 .channels-sidebar{width:220px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:4px;border-right:1px solid #1f2023;overflow-y:auto;flex-shrink:0;}
 .sidebar-title{font-size:12px;font-weight:bold;color:#949ba4;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .channel-btn{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:4px;color:#949ba4;cursor:pointer;font-size:14px;font-weight:500;position:relative;}
 .channel-btn:hover{background:#35373c;color:#dbdee1;}
 .channel-btn.active{background:#404249;color:white;}
 .channel-name-wrapper{display:flex;align-items:center;gap:6px;}
-.channel-name-wrapper::before{content:"#";font-size:18px;color:#80848e;margin-right:2px;}
+
+/* Dinámico según si es canal de texto o chat privado */
+.is-channel .channel-name-wrapper::before{content:"#";font-size:18px;color:#80848e;margin-right:2px;}
+.is-dm .channel-name-wrapper::before{content:"👤";font-size:14px;margin-right:4px;}
 
 .channel-badge {width:8px;height:8px;background:#ffffff;border-radius:50%;display:none;}
 .channel-btn.unread .channel-badge {display:block;}
@@ -72,9 +78,7 @@ button:hover{background:#4752c4;}
 .time{font-size:11px;color:#949ba4;}
 .text{color:#dbdee1;font-size:15px;word-break:break-word;line-height:1.4;}
 
-/* Estilos Markdown de la Web */
 .text code {background:#2b2d31; padding:2px 4px; border-radius:4px; font-family:monospace; font-size:14px; color:#e0c89a;}
-
 .media-attachment{margin-top:8px;max-width:400px;max-height:300px;border-radius:8px;overflow:hidden;display:block;}
 .media-attachment img, .media-attachment video{max-width:100%;max-height:300px;border-radius:8px;}
 
@@ -111,13 +115,26 @@ button:hover{background:#4752c4;}
 </div>
 
 <div class="app-container" id="app">
-  <div class="guilds-sidebar" id="guildsContainer"></div>
+  <!-- COLUMNA 1: SELECTOR DE SERVIDORES Y BOTÓN DM -->
+  <div class="guilds-sidebar">
+    <!-- Botón de Mensajes Directos (Estilo Discord de la imagen) -->
+    <div class="guild-icon active" id="dmServerBtn" title="Mensajes Directos" onclick="selectDMMode()">
+      <svg class="dm-icon-svg" viewBox="0 0 127.14 96.36">
+        <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36a77.7,77.7,0,0,0,6.63-10.85,68.43,68.43,0,0,1-10.43-5c.56-.41,1.11-.84,1.64-1.28A75.48,75.48,0,0,0,100,79.24c.53.44,1.08.87,1.64,1.28a68.43,68.43,0,0,1-10.43,5A77.7,77.7,0,0,0,97.83,96.36a105.73,105.73,0,0,0,31-18.83C130,50.12,123.83,27.23,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.83,46,53.83,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.07,46,96.07,53,91,65.69,84.69,65.69Z"/>
+      </svg>
+      <div class="guild-badge"></div>
+    </div>
+    <div class="guild-separator"></div>
+    <div id="guildsContainer" style="display:contents;"></div>
+  </div>
 
+  <!-- COLUMNA 2: SELECTOR DE CANALES / CONVERSACIONES DM -->
   <div class="channels-sidebar">
-    <div class="sidebar-title" id="currentGuildName">Cargando Server...</div>
+    <div class="sidebar-title" id="currentGuildName">Mensajes Directos</div>
     <div id="channels-container"></div>
   </div>
 
+  <!-- COLUMNA 3: FLUJO DE CHAT -->
   <div class="chat-area">
     <div id="messages" class="messages"></div>
     <div class="input-box">
@@ -126,12 +143,14 @@ button:hover{background:#4752c4;}
     </div>
   </div>
   
+  <!-- COLUMNA 4: LISTA DE MIEMBROS -->
   <div class="member-list">
-    <div class="member-title">Miembros</div>
+    <div class="member-title" id="membersTitle">Miembros</div>
     <div id="members-container"></div>
   </div>
 </div>
 
+<!-- MODAL DE PERFIL DETALLADO -->
 <div class="modal-overlay" id="profileModal" onclick="closeProfile()">
   <div class="profile-modal" onclick="event.stopPropagation()">
     <div class="profile-banner"></div>
@@ -178,7 +197,8 @@ const db = getDatabase(app);
 
 let messages = [];
 let cacheUsers = {};
-let currentGuildId = "";
+let isDMMode = true; // Empieza en modo Mensajes Directos por defecto
+let currentGuildId = "DM"; 
 let currentChannelId = "";
 let unreadCount = 0;
 let isTabFocused = true;
@@ -189,15 +209,13 @@ let unreadGuilds = {};
 window.addEventListener('focus', () => { isTabFocused = true; unreadCount = 0; document.title = "KoriCord"; });
 window.addEventListener('blur', () => { isTabFocused = false; });
 
-// Función para parsear MD de forma segura (Solo texto plano de Discord, sin inyecciones HTML externas)
 function escapeHTML(text) {
   if(!text) return "";
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function parseMarkdown(text) {
-  let escaped = escapeHTML(text);
-  let html = escaped
+  let html = escapeHTML(text)
     .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')           
     .replace(/__([\s\S]+?)__/g, '<u>$1</u>')                           
     .replace(/\*([\s\S]+?)\*/g, '<em>$1</em>')                         
@@ -251,9 +269,6 @@ function renderMessages(){
       }
     }
 
-    // CONDICIONAL CRÍTICA: Si el mensaje viene de la web, renderiza MD. Si viene de Discord, escapa el HTML puro para seguridad.
-    const textHtml = m.isWeb ? parseMarkdown(m.text) : escapeHTML(m.text);
-
     div.innerHTML = `
     <div class="avatar-container"><div class="avatar">${avatarHtml}</div></div>
     <div class="msg-content">
@@ -262,7 +277,7 @@ function renderMessages(){
         <span class="sub-user">@${m.username || 'kori'}</span>
         <span class="time">${new Date(m.timestamp).toLocaleTimeString()}</span>
       </div>
-      <div class="text">${textHtml}</div>
+      <div class="text">${parseMarkdown(m.text)}</div>
       ${attachmentHtml}
     </div>`;
     box.appendChild(div);
@@ -270,19 +285,29 @@ function renderMessages(){
   box.scrollTop = box.scrollHeight;
 }
 
+// Alternar al Modo de Mensajes Directos (Botón de arriba)
+window.selectDMMode = () => {
+  isDMMode = true;
+  currentGuildId = "DM";
+  currentChannelId = "";
+  
+  document.querySelectorAll('.guild-icon').forEach(i => i.classList.remove('active'));
+  document.getElementById("dmServerBtn").classList.add('active');
+  
+  loadChannelsAndMembers();
+};
+
+// Escuchar lista de Servidores de Discord
 onValue(ref(db, "guilds"), snap => {
   const container = document.getElementById("guildsContainer");
   container.innerHTML = "";
   const guilds = snap.val();
   if(!guilds) return;
 
-  const list = Object.values(guilds);
-  if(!currentGuildId && list.length > 0) currentGuildId = list[0].id;
-
-  list.forEach(g => {
+  Object.values(guilds).forEach(g => {
     const iconBtn = document.createElement("div");
     iconBtn.id = `guild-node-${g.id}`;
-    iconBtn.className = `guild-icon ${g.id === currentGuildId ? 'active' : ''} ${unreadGuilds[g.id] ? 'unread' : ''}`;
+    iconBtn.className = `guild-icon ${(!isDMMode && g.id === currentGuildId) ? 'active' : ''} ${unreadGuilds[g.id] ? 'unread' : ''}`;
     iconBtn.title = g.name;
     
     if(g.iconUrl) {
@@ -292,6 +317,7 @@ onValue(ref(db, "guilds"), snap => {
     }
 
     iconBtn.onclick = () => {
+      isDMMode = false;
       currentGuildId = g.id;
       unreadGuilds[g.id] = false;
       iconBtn.classList.remove('unread');
@@ -307,99 +333,151 @@ onValue(ref(db, "guilds"), snap => {
 });
 
 function loadChannelsAndMembers() {
-  if(!currentGuildId) return;
+  const channelContainer = document.getElementById("channels-container");
+  channelContainer.innerHTML = "";
 
-  onValue(ref(db, `guilds/${currentGuildId}`), gSnap => {
-    const g = gSnap.val();
-    if(g) document.getElementById("currentGuildName").innerText = g.name;
-  });
+  if (isDMMode) {
+    document.getElementById("currentGuildName").innerText = "Mensajes Directos";
+    document.getElementById("membersTitle").innerText = "Tus Contactos";
 
-  onValue(ref(db, `channels/${currentGuildId}`), snap => {
-    const container = document.getElementById("channels-container");
-    container.innerHTML = "";
-    const channels = snap.val();
-    if(!channels) return;
+    // Cargar canales de mensajes directos privados
+    onValue(ref(db, "dmChannels"), snap => {
+      channelContainer.innerHTML = "";
+      const dms = snap.val();
+      if(!dms) return;
 
-    const list = Object.values(channels);
-    if(!currentChannelId && list.length > 0) {
-      currentChannelId = list[0].id;
-      unreadChannels[currentChannelId] = false;
-    }
+      const list = Object.values(dms);
+      if(!currentChannelId && list.length > 0) currentChannelId = list[0].id;
 
-    list.forEach(ch => {
-      const btn = document.createElement("div");
-      btn.id = `channel-node-${ch.id}`;
-      btn.className = `channel-btn ${ch.id === currentChannelId ? 'active' : ''} ${unreadChannels[ch.id] ? 'unread' : ''}`;
-      
-      btn.innerHTML = `
-        <div class="channel-name-wrapper">${ch.name}</div>
-        <div class="channel-badge"></div>
-      `;
-
-      btn.onclick = () => {
-        currentChannelId = ch.id;
-        unreadChannels[ch.id] = false;
-        btn.classList.remove('unread');
-        document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        renderMessages();
-      };
-      container.appendChild(btn);
+      list.forEach(dm => {
+        const btn = document.createElement("div");
+        btn.id = `channel-node-${dm.id}`;
+        btn.className = `channel-btn is-dm ${dm.id === currentChannelId ? 'active' : ''} ${unreadChannels[dm.id] ? 'unread' : ''}`;
+        btn.innerHTML = `<div class="channel-name-wrapper">${dm.name}</div><div class="channel-badge"></div>`;
+        btn.onclick = () => {
+          currentChannelId = dm.id;
+          unreadChannels[dm.id] = false;
+          btn.classList.remove('unread');
+          document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderMessages();
+        };
+        channelContainer.appendChild(btn);
+      });
+      renderMessages();
     });
-    renderMessages();
-  });
 
-  onValue(ref(db, `usersStatus/${currentGuildId}`), snap => {
-    const container = document.getElementById("members-container");
-    container.innerHTML = "";
-    const users = snap.val();
-    if(!users) return;
-    cacheUsers = users;
+    // En modo DM, la lista de miembros de la derecha muestra a todos tus amigos de chat privados
+    onValue(ref(db, "dmChannels"), snap => {
+      const memberContainer = document.getElementById("members-container");
+      memberContainer.innerHTML = "";
+      const dms = snap.val();
+      if(!dms) return;
+      cacheUsers = dms;
 
-    const sortedUsers = Object.values(users).sort((a,b) => (b.status !== "offline") - (a.status !== "offline"));
+      Object.values(dms).forEach(u => {
+        const card = document.createElement("div");
+        card.className = "member-card";
+        card.onclick = () => openProfile(u.id);
+        const userAvatar = u.avatar ? `<img src="${u.avatar}">` : u.name[0];
 
-    for(const u of sortedUsers){
-      const card = document.createElement("div");
-      card.className = "member-card";
-      card.onclick = () => openProfile(u.uid);
-      
-      const userAvatar = u.avatar ? `<img src="${u.avatar}">` : u.nickname[0];
-      let statusClass = "status-offline";
-      if(u.status === "online") statusClass = "status-online";
-      if(u.status === "idle") statusClass = "status-idle";
-      if(u.status === "dnd") statusClass = "status-dnd";
+        card.innerHTML = `
+          <div class="avatar-container"><div class="avatar">${userAvatar}</div></div>
+          <div class="user-info">
+            <span class="member-nick">${u.name}</span>
+            <span class="member-user">@dm_chat</span>
+          </div>`;
+        memberContainer.appendChild(card);
+      });
+    });
 
-      let activityHtml = u.status !== "offline" && u.activity ? `<span class="member-activity">${u.activity}</span>` : "";
+  } else {
+    // MODO SERVIDORES NORMAL
+    document.getElementById("membersTitle").innerText = "Miembros";
+    onValue(ref(db, `guilds/${currentGuildId}`), gSnap => {
+      const g = gSnap.val();
+      if(g) document.getElementById("currentGuildName").innerText = g.name;
+    });
 
-      card.innerHTML = `
-        <div class="avatar-container">
-          <div class="avatar">${userAvatar}</div>
-          <div class="status-dot ${statusClass}"></div>
-        </div>
-        <div class="user-info">
-          <span class="member-nick">${u.nickname}</span>
-          <span class="member-user">@${u.username}</span>
-          ${activityHtml}
-        </div>
-      `;
-      container.appendChild(card);
-    }
-  });
+    onValue(ref(db, `channels/${currentGuildId}`), snap => {
+      channelContainer.innerHTML = "";
+      const channels = snap.val();
+      if(!channels) return;
+
+      const list = Object.values(channels);
+      if(!currentChannelId && list.length > 0) currentChannelId = list[0].id;
+
+      list.forEach(ch => {
+        const btn = document.createElement("div");
+        btn.id = `channel-node-${ch.id}`;
+        btn.className = `channel-btn is-channel ${ch.id === currentChannelId ? 'active' : ''} ${unreadChannels[ch.id] ? 'unread' : ''}`;
+        btn.innerHTML = `<div class="channel-name-wrapper">${ch.name}</div><div class="channel-badge"></div>`;
+        btn.onclick = () => {
+          currentChannelId = ch.id;
+          unreadChannels[ch.id] = false;
+          btn.classList.remove('unread');
+          document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderMessages();
+        };
+        channelContainer.appendChild(btn);
+      });
+      renderMessages();
+    });
+
+    onValue(ref(db, `usersStatus/${currentGuildId}`), snap => {
+      const container = document.getElementById("members-container");
+      container.innerHTML = "";
+      const users = snap.val();
+      if(!users) return;
+      cacheUsers = users;
+
+      const sortedUsers = Object.values(users).sort((a,b) => (b.status !== "offline") - (a.status !== "offline"));
+      for(const u of sortedUsers){
+        const card = document.createElement("div");
+        card.className = "member-card";
+        card.onclick = () => openProfile(u.uid);
+        
+        const userAvatar = u.avatar ? `<img src="${u.avatar}">` : u.nickname[0];
+        let statusClass = "status-offline";
+        if(u.status === "online") statusClass = "status-online";
+        if(u.status === "idle") statusClass = "status-idle";
+        if(u.status === "dnd") statusClass = "status-dnd";
+
+        let activityHtml = u.status !== "offline" && u.activity ? `<span class="member-activity">${u.activity}</span>` : "";
+
+        card.innerHTML = `
+          <div class="avatar-container">
+            <div class="avatar">${userAvatar}</div>
+            <div class="status-dot ${statusClass}"></div>
+          </div>
+          <div class="user-info">
+            <span class="member-nick">${u.nickname}</span>
+            <span class="member-user">@${u.username}</span>
+            ${activityHtml}
+          </div>`;
+        container.appendChild(card);
+      }
+    });
+  }
 }
 
+// Capturar tanto mensajes de canales como de Mensajes Directos (DMs) privados
 onChildAdded(ref(db,"discordMessages"), snap=>{
   const msg = snap.val();
-  messages.push({...msg, isWeb: false}); // Marca de origen externa
+  messages.push(msg);
   
   if(msg.channelId !== currentChannelId) {
     unreadChannels[msg.channelId] = true;
     const chNode = document.getElementById(`channel-node-${msg.channelId}`);
     if(chNode) chNode.classList.add('unread');
     
-    if(msg.guildId && msg.guildId !== currentGuildId) {
+    if(msg.guildId && msg.guildId !== "DM" && msg.guildId !== currentGuildId) {
       unreadGuilds[msg.guildId] = true;
       const gNode = document.getElementById(`guild-node-${msg.guildId}`);
       if(gNode) gNode.classList.add('unread');
+    } else if (msg.guildId === "DM" && !isDMMode) {
+      document.getElementById("dmServerBtn").classList.add('unread');
     }
   }
 
@@ -414,8 +492,7 @@ onChildAdded(ref(db,"webMessages"), snap=>{
     nickname: "Kori",
     username: "soykori",
     timestamp: data.time,
-    channelId: data.channelId,
-    isWeb: true // Marca exclusiva para activar Markdown
+    channelId: data.channelId
   });
   renderMessages();
 });
@@ -423,10 +500,10 @@ onChildAdded(ref(db,"webMessages"), snap=>{
 window.openProfile = (uid) => {
   const u = cacheUsers[uid];
   if(!u) return;
-  document.getElementById("modalAvatar").innerHTML = u.avatar ? `<img src="${u.avatar}">` : u.nickname[0];
-  document.getElementById("modalNick").innerText = u.nickname;
-  document.getElementById("modalUser").innerText = "@" + u.username;
-  document.getElementById("modalActivity").innerText = u.activity || "Ninguna actividad en curso";
+  document.getElementById("modalAvatar").innerHTML = u.avatar ? `<img src="${u.avatar}">` : (u.nickname || u.name)[0];
+  document.getElementById("modalNick").innerText = u.nickname || u.name;
+  document.getElementById("modalUser").innerText = "@" + (u.username || "privado");
+  document.getElementById("modalActivity").innerText = u.activity || "Ninguna";
   document.getElementById("modalJoined").innerText = u.joinedAt ? new Date(u.joinedAt).toLocaleDateString() : "Desconocido";
   
   const rolesBox = document.getElementById("modalRoles");
@@ -438,23 +515,11 @@ window.openProfile = (uid) => {
       badge.innerText = r;
       rolesBox.appendChild(badge);
     });
-  } else {
-    rolesBox.innerText = "Ninguno";
-  }
+  } else { rolesBox.innerText = "Ninguno"; }
   document.getElementById("profileModal").style.display = "flex";
 };
 
 window.closeProfile = () => { document.getElementById("profileModal").style.display = "none"; };
-
-onValue(ref(db, "typing/discord"), snap => {
-  const typingBox = document.getElementById("typing");
-  const data = snap.val();
-  if (data && data.username && (Date.now() - data.time < 6000)) {
-    typingBox.innerText = `@${data.username} está escribiendo...`;
-  } else {
-    typingBox.innerText = "";
-  }
-});
 
 window.sendMessage = async function(){
   const text = document.getElementById("msg").value;
