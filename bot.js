@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, Partials } from "discord.js";
 import express from "express";
 import admin from "firebase-admin";
 
-/* 🔑 CONFIGURACIÓN DE FIREBASE */
+/* 🔑 CONFIGURACIÓN DE FIREBASE (Usa tus variables de entorno de Render) */
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static("public"));
 app.listen(PORT, () => { console.log("🌐 KoriCord Web corriendo a la velocidad de la luz"); });
 
-/* 🤖 CONFIGURACIÓN DEL BOT DE DISCORD (CON TODOS LOS INTENTS REACTIVOS) */
+/* 🤖 CONFIGURACIÓN DEL BOT DE DISCORD */
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -33,13 +33,15 @@ const client = new Client({
   partials: [Partials.Channel, Partials.Message]
 });
 
-// Función optimizada para extraer la actividad exacta en tiempo real
+// Cache local para controlar temporizadores de escritura individuales por canal
+const typingTimeouts = {};
+
 function getMemberActivity(member) {
   if (!member.presence || !member.presence.activities.length) return null;
   for (const activity of member.presence.activities) {
     if (activity.name === "Custom Status") {
       if(!activity.state) return null;
-      return `✨ ${activity.state.replace(/<a?:.+?:\d+>/g, '✨')}`; // Limpia emojis personalizados rotos
+      return `✨ ${activity.state.replace(/<a?:.+?:\d+>/g, '✨')}`;
     }
     if (activity.type === 2) return `🎧 Escuchando ${activity.name}`;
     if (activity.type === 0) return `🎮 Jugando a ${activity.name}`;
@@ -47,9 +49,8 @@ function getMemberActivity(member) {
   return member.presence.activities[0].name ? `✨ ${member.presence.activities[0].name}` : null;
 }
 
-// Sincronización estructural rápida al encender (No borra mensajes ni historiales)
+// Sincronización estructural rápida al encender (No borra mensajes ni historiales antiguos)
 async function syncDiscordStructure() {
-  console.log("⚡ Sincronizando servidores, canales y estados iniciales...");
   const guilds = client.guilds.cache.values();
   
   for (const guild of guilds) {
@@ -57,7 +58,6 @@ async function syncDiscordStructure() {
       const iconUrl = guild.iconURL({ extension: 'png', size: 128 }) || null;
       await db.ref(`guilds/${guild.id}`).update({ id: guild.id, name: guild.name, iconUrl: iconUrl });
 
-      // Cargar canales de texto
       const channels = await guild.channels.fetch();
       channels.forEach(ch => {
         if (ch.isTextBased()) {
@@ -65,7 +65,6 @@ async function syncDiscordStructure() {
         }
       });
 
-      // Cargar miembros y presencias iniciales de forma directa
       const members = await guild.members.fetch({ withPresences: true });
       members.forEach(member => {
         if (member.user.bot) return;
@@ -75,8 +74,8 @@ async function syncDiscordStructure() {
 
         db.ref(`usersStatus/${guild.id}/${member.user.id}`).update({
           uid: member.user.id,
-          nickname: member.displayName,
           username: member.user.username,
+          nickname: member.displayName,
           avatar: member.user.displayAvatarURL({ extension: 'png', size: 128 }) || null,
           status: status,
           activity: status !== "offline" ? activityText : null,
@@ -86,7 +85,6 @@ async function syncDiscordStructure() {
       });
     } catch (e) { console.error("Error en sincronización inicial:", e); }
   }
-  console.log("✅ Sincronización inicial completada con éxito.");
 }
 
 client.once("ready", () => {
@@ -105,7 +103,7 @@ client.on("presenceUpdate", (oldPresence, newPresence) => {
   const activityText = getMemberActivity(member);
   const roles = member.roles.cache.filter(r => r.name !== "@everyone").map(r => r.name);
 
-  // Actualización atómica del usuario que cambió su estado, sin tocar nada más
+  // Actualizar el estado en cada servidor donde coincidan
   db.ref(`usersStatus/${guildId}/${newPresence.user.id}`).update({
     nickname: member.displayName,
     username: newPresence.user.username,
@@ -114,20 +112,40 @@ client.on("presenceUpdate", (oldPresence, newPresence) => {
     activity: status !== "offline" ? activityText : null,
     roles: roles
   });
+
+  // Si tiene un canal DM activo en la interfaz, actualizar su luna de estado al milisegundo
+  db.ref(`dmChannels/${newPresence.user.id}`).update({ status: status });
 });
 
 /* ⌨️ INDICADOR ESCRIBIENDO: Discord -> Web en milisegundos */
 client.on("typingStart", (typing) => {
   if (typing.user.bot) return;
+
+  const channelId = typing.channel.id;
   db.ref("typing/discord").set({
     username: typing.user.username,
+    channelId: channelId,
     time: Date.now()
   });
+
+  // Apaga automáticamente el indicador tras 4 segundos para que no se quede congelado
+  if (typingTimeouts[channelId]) clearTimeout(typingTimeouts[channelId]);
+  typingTimeouts[channelId] = setTimeout(() => {
+    db.ref("typing/discord").set(null);
+  }, 4000);
 });
 
 /* 💬 TRANSMISIÓN DIRECTA: DISCORD → FIREBASE */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
+
+  // Si el usuario envió el mensaje, forzar el apagado inmediato del "está escribiendo..."
+  const channelId = message.channel.id;
+  if (typingTimeouts[channelId]) {
+    clearTimeout(typingTimeouts[channelId]);
+    delete typingTimeouts[channelId];
+  }
+  await db.ref("typing/discord").set(null);
 
   let attachments = [];
   if (message.attachments.size > 0) {
@@ -142,16 +160,19 @@ client.on("messageCreate", async (message) => {
   const isDM = !message.guild; 
   const guildId = isDM ? "DM" : message.guild.id;
 
-  // Si es un mensaje directo (DM), guardamos/actualizamos dinámicamente el contacto en la lista
+  // Si es un MD, guardamos/actualizamos el contacto en la base con los campos de la tarjeta
   if(isDM) {
     await db.ref(`dmChannels/${message.channel.id}`).update({
       id: message.channel.id,
       name: message.author.globalName || message.author.username,
-      avatar: message.author.displayAvatarURL({ extension: 'png', size: 128 })
+      username: message.author.username,
+      avatar: message.author.displayAvatarURL({ extension: 'png', size: 128 }),
+      status: message.author.presence?.status || "online",
+      joinedAt: message.author.createdAt.getTime(),
+      bio: "Conversación privada mapeada de forma segura hacia la interfaz de KoriCord."
     });
   }
 
-  // Empujar el mensaje con una marca de tiempo única e inequívoca
   await db.ref("discordMessages").push({
     nickname: isDM ? (message.author.globalName || message.author.username) : (message.member?.displayName || message.author.username),
     username: message.author.username,
@@ -159,7 +180,7 @@ client.on("messageCreate", async (message) => {
     text: message.content,
     attachments: attachments,
     guildId: guildId, 
-    channelId: message.channel.id, 
+    channelId: channelId, 
     timestamp: Date.now()
   });
 });
@@ -168,8 +189,6 @@ client.on("messageCreate", async (message) => {
 db.ref("webMessages").on("child_added", async (snap) => {
   const data = snap.val();
   if (!data?.text || !data.channelId) return;
-  
-  // Evita re-enviar mensajes antiguos que queden en la caché al encender el bot
   if (Date.now() - data.time > 4000) return; 
 
   try {
@@ -177,7 +196,19 @@ db.ref("webMessages").on("child_added", async (snap) => {
     if (channel && channel.isTextBased()) {
       await channel.send(data.text);
     }
-  } catch (err) { console.error("Error al enviar mensaje a Discord nativo:", err); }
+  } catch (err) { console.error("Error al retransmitir a Discord nativo:", err); }
 });
 
+/* 🌐 ESCUCHAR ESCRITURA DE LA WEB: Web -> Discord */
+db.ref("typing/web").on("value", async (snap) => {
+  const data = snap.val();
+  if (data && data.channelId && (Date.now() - data.time < 3500)) {
+    try {
+      const channel = await client.channels.fetch(data.channelId);
+      if (channel && channel.isTextBased()) await channel.sendTyping();
+    } catch(e){}
+  }
+});
+
+// Uso seguro del token mediante variable de entorno protegida en Render
 client.login(process.env.DISCORD_TOKEN);
