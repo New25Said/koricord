@@ -1,51 +1,375 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>KoriCord - Full</title>
+<title>KoriCord</title>
+
 <style>
-/* CSS INTEGRADO */
-*,*::before,*::after{box-sizing:border-box}body{margin:0;font-family:'Helvetica Neue',Arial,sans-serif;background:#111214;color:#dbdee1;height:100vh;overflow:hidden}
-#login{position:fixed;inset:0;background:#1e1f22;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:999}
-input,button{padding:12px;border-radius:4px;border:none;outline:none}
-#app{display:none;height:100vh;width:100vw;display:flex}
-.guilds-sidebar{width:72px;background:#1e1f22;padding:12px 0;display:flex;flex-direction:column;align-items:center;gap:8px}
-.guild-icon{width:48px;height:48px;border-radius:50%;background:#313338;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;transition:0.2s}
-.guild-icon:hover,.guild-icon.active{border-radius:16px;background:#5865f2;color:white}
-.channels-sidebar{width:240px;background:#2b2d31;display:flex;flex-direction:column}
-.channel-btn{padding:8px;margin:2px 8px;border-radius:4px;cursor:pointer;color:#949ba4}
-.channel-btn:hover{background:#35373c}
-.channel-btn.active{background:#404249;color:white}
-.chat-area{flex:1;display:flex;flex-direction:column;background:#313338}
-.messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:16px}
-.msg{display:flex;gap:16px}
-.avatar{width:40px;height:40px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;font-weight:bold}
-.member-list{width:240px;background:#2b2d31;padding:16px}
-.member-card{display:flex;align-items:center;gap:10px;padding:6px;cursor:pointer}
-.input-box{padding:16px;background:#313338}
-.input-box input{width:100%;padding:12px;border-radius:8px;background:#383a40;border:none;color:white}
+body{
+margin:0;
+font-family:Arial;
+background:#313338;
+color:white;
+display:flex;
+height:100vh;
+overflow:hidden;
+}
+
+/* 🔐 LOGIN SCREEN */
+.login-screen {
+position: fixed;
+top: 0;
+left: 0;
+width: 100vw;
+height: 100vh;
+background: #1e1f22;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+z-index: 9999;
+gap: 15px;
+}
+
+.login-box {
+background: #2b2d31;
+padding: 30px;
+border-radius: 8px;
+box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+text-align: center;
+width: 300px;
+}
+
+.login-box h3 {
+margin-top: 0;
+margin-bottom: 20px;
+}
+
+.login-box input {
+width: 100%;
+box-sizing: border-box;
+margin-bottom: 15px;
+padding: 12px;
+}
+
+.login-box button {
+width: 100%;
+}
+
+.error-msg {
+color: #f23f43;
+font-size: 13px;
+margin-top: 10px;
+display: none;
+}
+
+/* 🏢 APP INTERFACE */
+.sidebar{
+width:240px;
+background:#2b2d31;
+padding:12px;
+border-right:1px solid #1f2023;
+}
+
+.chat{
+flex:1;
+display:flex;
+flex-direction:column;
+height: 100%;
+}
+
+.messages{
+flex:1;
+overflow-y:auto;
+padding:16px;
+display:flex;
+flex-direction:column;
+gap:10px;
+}
+
+.msg{
+display:flex;
+gap:10px;
+padding:8px;
+border-radius:8px;
+}
+
+.msg:hover{
+background:#2b2d31;
+}
+
+.avatar{
+width:38px;
+height:38px;
+border-radius:50%;
+object-fit:cover;
+background:#5865f2;
+display:flex;
+align-items:center;
+justify-content:center;
+font-weight:bold;
+flex-shrink:0;
+}
+
+.content{
+display:flex;
+flex-direction:column;
+}
+
+.top{
+display:flex;
+gap:8px;
+align-items:center;
+}
+
+.name{
+font-weight:bold;
+}
+
+.username{
+font-size:12px;
+color:#949ba4;
+margin-top:2px;
+margin-bottom:4px;
+}
+
+.time{
+font-size:11px;
+color:#a1a1a1;
+}
+
+.text{
+color:#dcddde;
+margin-top:2px;
+}
+
+.typing-indicator {
+padding: 4px 16px;
+font-size: 12px;
+color: #b5bac1;
+height: 18px;
+background: #313338;
+}
+
+.input{
+padding:12px;
+background:#2b2d31;
+display:flex;
+gap:10px;
+}
+
+input{
+flex:1;
+padding:10px;
+border:none;
+border-radius:6px;
+background:#1e1f22;
+color:white;
+}
+
+button{
+padding:10px;
+border:none;
+border-radius:6px;
+background:#5865f2;
+color:white;
+cursor:pointer;
+}
 </style>
 </head>
+
 <body>
-<div id="login"><h2>KoriCord Access</h2><input id="code" type="password"><button id="loginBtn">Entrar</button></div>
-<div class="app-container" id="app">
-    <div class="guilds-sidebar"><div class="guild-icon" id="dmServerBtn">DM</div><div id="guildsContainer"></div></div>
-    <div class="channels-sidebar"><div id="channels-container"></div></div>
-    <div class="chat-area"><div id="messages" class="messages"></div><div class="input-box"><input id="msg" placeholder="Mensaje..."></div></div>
-    <div class="member-list" id="sidebarRightColumn"></div>
+
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <h3>¿Eres Kori?</h3>
+    <input id="loginInput" type="password" placeholder="Escribe la clave secreta...">
+    <button onclick="checkLogin()">Entrar</button>
+    <div id="errorMsg" class="error-msg">Esto es solo para kori, intenta otra vez</div>
+  </div>
 </div>
+
+<div class="sidebar">
+<h2>KoriCord</h2>
+<div>2PyM</div>
+<div>🌐 Web ↔ Discord :D</div>
+</div>
+
+<div class="chat">
+  <div id="messages" class="messages"></div>
+  <div id="typing" class="typing-indicator"></div>
+  <div class="input">
+    <input id="msg" placeholder="Escribe a Discord...">
+    <button onclick="sendMessage()">Enviar</button>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
-const db = getDatabase(initializeApp({apiKey:"AIzaSyARq5j8Kf9p4SYj4sj3167BjVD-Q4KczQE",databaseURL:"https://koricord-a5f4e-default-rtdb.firebaseio.com",projectId:"koricord-a5f4e"}));
-document.getElementById("loginBtn").onclick = () => { if(document.getElementById("code").value==="soykori"){ document.getElementById("login").style.display="none"; document.getElementById("app").style.display="flex"; }};
-const msgInput = document.getElementById("msg");
-msgInput.onkeydown = (e) => { if(e.key==="Enter" && msgInput.value.trim()){ push(ref(db, "webMessages"), {text: msgInput.value, time: Date.now(), channelId: "general"}); msgInput.value=""; }};
-onChildAdded(ref(db, "discordMessages"), (snap) => {
-    const data = snap.val(); const div = document.createElement("div"); div.className="msg";
-    div.innerHTML = `<div class="avatar">${(data.nickname||"K")[0]}</div><div class="content"><b>${data.nickname}</b><br>${data.text}</div>`;
-    document.getElementById("messages").appendChild(div);
+import {
+getDatabase,
+ref,
+push,
+set,
+onValue,
+onChildAdded
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyARq5j8Kf9p4SYj4sj3167BjVD-Q4KczQE",
+authDomain: "koricord-a5f4e.firebaseapp.com",
+databaseURL: "https://koricord-a5f4e-default-rtdb.firebaseio.com",
+projectId: "koricord-a5f4e",
+storageBucket: "koricord-a5f4e.firebasestorage.app",
+messagingSenderId: "228519016518",
+appId: "1:228519016518:web:9062449c2b5135ee36b247"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let botAvatar = ""; 
+let botName = "Tú (Bot)";
+let allMessages = [];
+let typingTimeout = null;
+
+// Sistema de Login Directo
+window.checkLogin = function() {
+  const pass = document.getElementById("loginInput").value;
+  if(pass === "soykori") {
+    document.getElementById("loginScreen").style.display = "none";
+    initApp();
+  } else {
+    document.getElementById("errorMsg").style.display = "block";
+    document.getElementById("loginInput").value = "";
+  }
+};
+
+// Enter en el login
+document.getElementById("loginInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") checkLogin();
+});
+
+function initApp() {
+  // 1. Obtener la foto de perfil actual del Bot
+  onValue(ref(db, "botConfig"), (snap) => {
+    const data = snap.val();
+    if(data) {
+      botAvatar = data.avatar || "";
+      botName = data.username || "Tú (Bot)";
+    }
+  });
+
+  // 2. Escuchar escritores activos (Escribiendo...)
+  onValue(ref(db, "typing status"), (snap) => {
+    const data = snap.val();
+    if (data && data.isTyping && data.user !== "WebUser") {
+      document.getElementById("typing").innerText = `${data.user} está escribiendo...`;
+    } else {
+      document.getElementById("typing").innerText = "";
+    }
+  });
+
+  // Escuchar cuando el usuario Web escribe en el input
+  document.getElementById("msg").addEventListener("input", () => {
+    set(ref(db, "typing status"), { isTyping: true, user: "WebUser" });
+    
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      set(ref(db, "typing status"), { isTyping: false, user: "" });
+    }, 2000);
+  });
+
+  /* 🔄 CARGA E INTERSECCIÓN DE MENSAJES ORDENADOS */
+  function renderMessage(data, type) {
+    const div = document.createElement("div");
+    div.className = "msg";
+    
+    const msgTime = data.timestamp || data.time;
+    const timeStr = new Date(msgTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+
+    if (type === "discord") {
+      // Manejo de error para avatares corruptos o nulos
+      const avatarHtml = (data.avatar && data.avatar.startsWith('http')) 
+        ? `<img class="avatar" src="${data.avatar}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'avatar\\'>${(data.nickname || '?')[0].toUpperCase()}</div>';">`
+        : `<div class="avatar">${(data.nickname || "?")[0].toUpperCase()}</div>`;
+
+      div.innerHTML = `
+        ${avatarHtml}
+        <div class="content">
+          <div class="top">
+            <span class="name">${data.nickname || data.username}</span>
+            <span class="time">${timeStr}</span>
+          </div>
+          <div class="username">@${data.username}</div>
+          <div class="text">${data.text}</div>
+        </div>
+      `;
+    } else {
+      // Mensajes de la Web (Tus mensajes usando el avatar dinámico del bot)
+      const webAvatarHtml = botAvatar 
+        ? `<img class="avatar" src="${botAvatar}" onerror="this.style.display='none';">` 
+        : `<div class="avatar">K</div>`;
+
+      div.innerHTML = `
+        ${webAvatarHtml}
+        <div class="content">
+          <div class="top">
+            <span class="name">${botName}</span>
+            <span class="time">${timeStr}</span>
+          </div>
+          <div class="text">${data.text}</div>
+        </div>
+      `;
+    }
+
+    // Insertar manteniendo el orden cronológico estricto en el DOM
+    const container = document.getElementById("messages");
+    div.dataset.time = msgTime;
+
+    const children = Array.from(container.children);
+    const nextSibling = children.find(child => parseInt(child.dataset.time) > msgTime);
+
+    if (nextSibling) {
+      container.insertBefore(div, nextSibling);
+    } else {
+      container.appendChild(div);
+    }
+
+    container.scrollTop = container.scrollHeight;
+  }
+
+  // Cargar canales de mensajes de forma independiente pero ordenada vía DOM
+  onChildAdded(ref(db, "discordMessages"), (snap) => {
+    renderMessage(snap.val(), "discord");
+  });
+
+  onChildAdded(ref(db, "webMessages"), (snap) => {
+    renderMessage(snap.val(), "web");
+  });
+}
+
+/* 🌐 ENVIAR A FIREBASE */
+window.sendMessage = async function(){
+  const text = document.getElementById("msg").value;
+  if(!text) return;
+
+  // Quitar estado escribiendo de inmediato
+  set(ref(db, "typing status"), { isTyping: false, user: "" });
+
+  await push(ref(db,"webMessages"), {
+    text: text,
+    time: Date.now()
+  });
+
+  document.getElementById("msg").value="";
+};
+
+/* 💬 ENTER PARA ENVIAR */
+document.getElementById("msg").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") sendMessage();
 });
 </script>
+
 </body>
 </html>
