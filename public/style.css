@@ -1,0 +1,125 @@
+:root {
+  --bg-main: #111214;
+  --bg-sidebar: #1e1f22;
+  --bg-guilds: #111214;
+  --bg-chat: #2b2d31;
+  --accent: #5865f2;
+  --accent-glow: rgba(88, 101, 242, 0.4);
+  --text-main: #f2f3f5;
+  --text-muted: #949ba4;
+}
+
+body {
+  margin: 0; [cite: 8]
+  font-family: 'Segoe UI', Arial, sans-serif; [cite: 8]
+  background: var(--bg-main);
+  color: var(--text-main); [cite: 8]
+  display: flex; [cite: 8]
+  height: 100vh; [cite: 8]
+  overflow: hidden;
+}
+
+/* 🔐 LOGIN FUTURISTA */
+.login-screen {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: radial-gradient(circle at center, #1e1f22 0%, #0b0c0e 100%);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.login-box {
+  background: rgba(43, 45, 49, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 40px; border-radius: 12px;
+  text-align: center; width: 320px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.login-box h3 { margin-top: 0; margin-bottom: 24px; font-weight: 600; letter-spacing: 0.5px; }
+.login-box input {
+  width: 100%; box-sizing: border-box; margin-bottom: 20px;
+  padding: 14px; border-radius: 8px; border: 1px solid transparent;
+  background: #111214; color: white; transition: 0.3s;
+}
+.login-box input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 8px var(--accent-glow); }
+.login-box button {
+  width: 100%; padding: 14px; border: none; border-radius: 8px;
+  background: var(--accent); color: white; font-weight: bold; cursor: pointer; transition: 0.2s;
+}
+.login-box button:hover { background: #4752c4; box-shadow: 0 0 15px var(--accent-glow); }
+.error-msg { color: #f23f43; font-size: 13px; margin-top: 12px; display: none; }
+
+/* 🏢 DISCORD LAYOUT */
+.app-container { display: flex; width: 100vw; height: 100vh; }
+
+/* BARRA DE ICONOS (IZQUIERDA) */
+.guilds-sidebar {
+  width: 72px; background: var(--bg-guilds);
+  display: flex; flex-direction: column; align-items: center; padding-top: 12px;
+  border-right: 1px solid rgba(0,0,0,0.2);
+}
+.guild-icon-wrap { position: relative; cursor: pointer; }
+.guild-icon {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--bg-chat); display: flex; align-items: center; justify-content: center;
+  font-weight: bold; font-size: 18px; transition: 0.2s ease; overflow: hidden;
+}
+.guild-icon img { width: 100%; height: 100%; object-fit: cover; }
+.guild-icon-wrap:hover .guild-icon { border-radius: 16px; background: var(--accent); }
+
+/* TOOLTIP AL PASAR EL CURSOR */
+.guild-tooltip {
+  position: absolute; left: 80px; top: 50%; transform: translateY(-50%);
+  background: #111214; color: var(--text-main); padding: 8px 12px;
+  border-radius: 6px; font-size: 14px; font-weight: 600; white-space: nowrap;
+  visibility: hidden; opacity: 0; transition: opacity 0.15s ease, left 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5); pointer-events: none; z-index: 100;
+}
+.guild-icon-wrap:hover .guild-tooltip { visibility: visible; opacity: 1; left: 88px; }
+
+/* SIDEBAR DE CANALES */
+.sidebar { width: 240px; background: var(--bg-sidebar); display: flex; flex-direction: column; } [cite: 8]
+.sidebar-header { padding: 16px; border-bottom: 1px solid rgba(0,0,0,0.2); }
+.sidebar-header h2 { margin: 0; font-size: 16px; font-weight: bold; } [cite: 8]
+.sidebar-header .sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; } [cite: 8]
+.channels-list { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
+.channel-btn {
+  display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+  border-radius: 4px; cursor: pointer; color: var(--text-muted); font-size: 15px; transition: 0.2s;
+}
+.channel-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-main); }
+.channel-btn.active { background: rgba(255,255,255,0.1); color: var(--text-main); font-weight: 500; }
+.channel-btn::before { content: "#"; font-size: 18px; color: var(--text-muted); opacity: 0.6; }
+
+/* CHAT AREA */
+.chat { flex: 1; background: var(--bg-chat); display: flex; flex-direction: column; } [cite: 8]
+.chat-header {
+  height: 48px; display: flex; align-items: center; padding: 0 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.2); font-weight: bold; gap: 8px;
+}
+.chat-header .hashtag { color: var(--text-muted); font-size: 20px; }
+.messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; } [cite: 9]
+.msg { display: flex; gap: 16px; padding: 4px 8px; border-radius: 4px; transition: background 0.1s; } [cite: 9]
+.msg:hover { background: rgba(0, 0, 0, 0.08); } [cite: 9]
+.avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; } [cite: 9]
+.content { display: flex; flex-direction: column; } [cite: 10]
+.top { display: flex; gap: 8px; align-items: baseline; } [cite: 10]
+.name { font-weight: 500; color: #fff; } [cite: 10]
+.username { font-size: 11px; color: var(--text-muted); } [cite: 10]
+.time { font-size: 11px; color: var(--text-muted); } [cite: 10]
+.text { color: #dbdee1; margin-top: 4px; font-size: 15px; line-height: 1.375; white-space: pre-wrap; word-break: break-word; } [cite: 10]
+
+/* INDICADORES */
+.typing-indicator { padding: 0 16px; font-size: 12px; color: var(--text-muted); height: 20px; }
+.input { padding: 0 16px 24px 16px; display: flex; gap: 10px; background: transparent; } [cite: 10]
+input {
+  flex: 1; padding: 12px; border: none; border-radius: 8px; [cite: 11]
+  background: #383a40; color: white; font-size: 15px;
+}
+input:focus { outline: none; }
+button {
+  padding: 0 20px; border: none; border-radius: 8px; [cite: 11]
+  background: var(--accent); color: white; cursor: pointer; font-weight: 500;
+}
+button:hover { background: #4752c4; }
