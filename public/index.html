@@ -5,71 +5,73 @@
 <title>KoriCord</title>
 
 <style>
-body{margin:0;font-family:Arial, sans-serif;background:#313338;color:white;height:100vh;overflow:hidden;}
+/* Paleta de Colores un pelín más oscura estilo AMOLED / Discord Dark */
+body{margin:0;font-family:Arial, sans-serif;background:#111214;color:white;height:100vh;overflow:hidden;}
 #login{position:fixed;inset:0;background:#1e1f22;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:200;}
-input,button{padding:10px;border-radius:6px;border:none;outline:none;}
+input,button{padding:10px;border-radius:6px;border:none;outline:none;transition: all 0.2s ease;}
 button{background:#5865f2;color:white;cursor:pointer;font-weight:bold;}
-button:hover{background:#4752c4;}
+button:hover{background:#4752c4; transform: scale(1.03);}
 
 /* Estructura de 4 Columnas estilo Discord */
 .app-container{display:none;height:100vh;width:100vw;}
 
-/* COLUMNA 1: Lista de Servidores */
+/* COLUMNA 1: Lista de Servidores con Animaciones */
 .guilds-sidebar{width:72px;background:#1e1f22;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:8px;border-right:1px solid #111214;overflow-y:auto;flex-shrink:0;}
-.guild-icon{width:48px;height:48px;border-radius:50%;background:#313338;color:#dbdee1;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold;cursor:pointer;transition:all 0.2s ease;overflow:hidden;position:relative;}
-.guild-icon img{width:100%;height:100%;object-fit:cover;}
+.guild-icon{width:48px;height:48px;border-radius:50%;background:#313338;color:#dbdee1;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold;cursor:pointer;transition:all 0.25s cubic-bezier(0.4, 0, 0.2, 1);overflow:hidden;position:relative;}
+.guild-icon img{width:100%;height:100%;object-fit:cover;transition: transform 0.25s ease;}
+.guild-icon:hover img{transform: scale(1.1);}
 .guild-icon:hover, .guild-icon.active{border-radius:16px;background:#5865f2;color:white;}
-.guild-separator{width:32px;height:2px;background:#35373c;margin:4px 0;border-radius:1px;}
+.guild-separator{width:32px;height:2px;background:#2b2d31;margin:4px 0;border-radius:1px;}
 
-/* Icono de Mensajes Directos personalizado */
-.dm-icon-svg {width:26px; height:26px; fill:currentColor;}
+.dm-icon-svg {width:26px; height:26px; fill:currentColor; transition: transform 0.25s ease;}
+.guild-icon:hover .dm-icon-svg {transform: rotate(8deg) scale(1.1);}
 
-.guild-badge {position:absolute;bottom:0;right:0;width:14px;height:14px;background:#f23f43;border-radius:50%;border:2px solid #1e1f22;display:none;}
+.guild-badge {position:absolute;bottom:0;right:0;width:14px;height:14px;background:#f23f43;border-radius:50%;border:2px solid #1e1f22;display:none;animation: popBadge 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
 .guild-icon.unread .guild-badge {display:block;}
 
-/* COLUMNA 2: Lista de Canales / Lista de MDs privados */
-.channels-sidebar{width:220px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:4px;border-right:1px solid #1f2023;overflow-y:auto;flex-shrink:0;}
+/* COLUMNA 2: Lista de Canales */
+.channels-sidebar{width:220px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:4px;border-right:1px solid #1c1d1f;overflow-y:auto;flex-shrink:0;}
 .sidebar-title{font-size:12px;font-weight:bold;color:#949ba4;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.channel-btn{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:4px;color:#949ba4;cursor:pointer;font-size:14px;font-weight:500;position:relative;}
-.channel-btn:hover{background:#35373c;color:#dbdee1;}
-.channel-btn.active{background:#404249;color:white;}
+.channel-btn{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:4px;color:#949ba4;cursor:pointer;font-size:14px;font-weight:500;position:relative;transition: all 0.2s ease;}
+.channel-btn:hover{background:#35373c;color:#dbdee1;padding-left:12px;}
+.channel-btn.active{background:#404249;color:white;padding-left:12px;}
 .channel-name-wrapper{display:flex;align-items:center;gap:6px;}
 
-/* Dinámico según si es canal de texto o chat privado */
 .is-channel .channel-name-wrapper::before{content:"#";font-size:18px;color:#80848e;margin-right:2px;}
 .is-dm .channel-name-wrapper::before{content:"👤";font-size:14px;margin-right:4px;}
 
-.channel-badge {width:8px;height:8px;background:#ffffff;border-radius:50%;display:none;}
+.channel-badge {width:8px;height:8px;background:#ffffff;border-radius:50%;display:none;animation: popBadge 0.2s ease;}
 .channel-btn.unread .channel-badge {display:block;}
 
-/* COLUMNA 3: Área Central de Chat */
+/* COLUMNA 3: Área Central de Chat (Más Oscura) */
 .chat-area{flex:1;display:flex;flex-direction:column;height:100vh;background:#313338;position:relative;min-width:0;}
 .messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:4px;}
 
 /* COLUMNA 4: Barra Derecha de Miembros */
-.member-list{width:240px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:8px;border-left:1px solid #3f4147;overflow-y:auto;flex-shrink:0;}
+.member-list{width:240px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:8px;border-left:1px solid #1c1d1f;overflow-y:auto;flex-shrink:0;}
+.member-title{font-size:12px;font-weight:bold;color:#949ba4;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-left:8px;}
 
 /* Componentes de Usuario y Avatares */
 .avatar-container{position:relative;width:38px;height:38px;flex-shrink:0;}
 .avatar{width:38px;height:38px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:bold;}
 .avatar img{width:100%;height:100%;object-fit:cover;}
 
-.status-dot{position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;border:3px solid #2b2d31;}
+.status-dot{position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;border:3px solid #2b2d31;transition: all 0.2s ease;}
 .status-online{background:#23a55a;}
 .status-idle{background:#f0b232; border-radius: 50% 0 50% 50%; transform: rotate(-45deg); width: 10px; height: 10px; bottom: 0px; right: 0px;}
 .status-dnd{background:#f23f43;}
 .status-dnd::after{content:""; position:absolute; width:6px; height:2px; background:#2b2d31; top:50%; left:50%; transform:translate(-50%, -50%);}
 .status-offline{background:#80848e;}
 
-.member-card{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:4px;cursor:pointer;}
-.member-card:hover{background:#35373c;}
+.member-card{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:4px;cursor:pointer;transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);}
+.member-card:hover{background:#35373c;transform: translateX(4px);}
 .user-info{display:flex;flex-direction:column;min-width:0;flex:1;}
 .member-nick{font-weight:500;font-size:14px;color:#f2f3f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .member-user{font-size:11px;color:#949ba4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .member-activity{font-size:11px;color:#b5bac1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;font-style:italic;}
 
-/* Estilos de Mensajes */
-.msg{display:flex;gap:16px;padding:8px;border-radius:4px;}
+/* Estilos e Intro Fluida de Mensajes */
+.msg{display:flex;gap:16px;padding:8px;border-radius:4px;animation: fadeInMsg 0.25s ease-out both;}
 .msg:hover{background:#2e3035;}
 .msg-content{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
 .top{display:flex;align-items:baseline;gap:8px;}
@@ -78,18 +80,19 @@ button:hover{background:#4752c4;}
 .time{font-size:11px;color:#949ba4;}
 .text{color:#dbdee1;font-size:15px;word-break:break-word;line-height:1.4;}
 
-.text code {background:#2b2d31; padding:2px 4px; border-radius:4px; font-family:monospace; font-size:14px; color:#e0c89a;}
+.text code {background:#1e1f22; padding:2px 4px; border-radius:4px; font-family:monospace; font-size:14px; color:#e0c89a;}
 .media-attachment{margin-top:8px;max-width:400px;max-height:300px;border-radius:8px;overflow:hidden;display:block;}
-.media-attachment img, .media-attachment video{max-width:100%;max-height:300px;border-radius:8px;}
+.media-attachment img, .media-attachment video{max-width:100%;max-height:300px;border-radius:8px;transition: transform 0.2s ease;}
+.media-attachment img:hover{transform: scale(1.02);}
 
 /* Input */
 .input-box{padding:0 16px 24px 16px;background:#313338;position:relative;}
 .input-box input{width:100%;background:#383a40;color:#dbdee1;padding:12px;box-sizing:border-box;font-size:15px;border-radius:8px;border:none;}
 .typing-indicator{position:absolute;top:-18px;left:20px;font-size:12px;color:#abcdef;height:14px;}
 
-/* Modal de Perfil Detallado */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:250;align-items:center;justify-content:center;}
-.profile-modal{width:300px;background:#18191c;border-radius:8px;overflow:hidden;box-shadow:0 8px 16px rgba(0,0,0,0.5);}
+/* Modal de Perfil Detallado Animado */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:250;align-items:center;justify-content:center;backdrop-filter: blur(2px);transition: all 0.3s ease;}
+.profile-modal{width:300px;background:#18191c;border-radius:8px;overflow:hidden;box-shadow:0 12px 24px rgba(0,0,0,0.6);animation: scaleUpModal 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;}
 .profile-banner{height:60px;background:#5865f2;}
 .profile-header{padding:0 16px 16px 16px;position:relative;border-bottom:1px solid #232428;}
 .profile-modal-avatar{width:80px;height:80px;border-radius:50%;border:6px solid #18191c;background:#5865f2;overflow:hidden;position:absolute;top:-40px;left:16px;}
@@ -102,6 +105,20 @@ button:hover{background:#4752c4;}
 .profile-section-title{font-size:11px;font-weight:bold;color:#949ba4;text-transform:uppercase;letter-spacing:0.5px;}
 .profile-roles{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
 .role-badge{background:#2b2d31;color:#dbdee1;padding:4px 8px;border-radius:4px;font-size:12px;border:1px solid #35373c;}
+
+/* Keyframes de Animaciones */
+@keyframes fadeInMsg {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleUpModal {
+  from { transform: scale(0.9) translateY(10px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+@keyframes popBadge {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
 </style>
 </head>
 
@@ -117,7 +134,6 @@ button:hover{background:#4752c4;}
 <div class="app-container" id="app">
   <!-- COLUMNA 1: SELECTOR DE SERVIDORES Y BOTÓN DM -->
   <div class="guilds-sidebar">
-    <!-- Botón de Mensajes Directos (Estilo Discord de la imagen) -->
     <div class="guild-icon active" id="dmServerBtn" title="Mensajes Directos" onclick="selectDMMode()">
       <svg class="dm-icon-svg" viewBox="0 0 127.14 96.36">
         <path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36a77.7,77.7,0,0,0,6.63-10.85,68.43,68.43,0,0,1-10.43-5c.56-.41,1.11-.84,1.64-1.28A75.48,75.48,0,0,0,100,79.24c.53.44,1.08.87,1.64,1.28a68.43,68.43,0,0,1-10.43,5A77.7,77.7,0,0,0,97.83,96.36a105.73,105.73,0,0,0,31-18.83C130,50.12,123.83,27.23,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.83,46,53.83,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.07,46,96.07,53,91,65.69,84.69,65.69Z"/>
@@ -145,7 +161,7 @@ button:hover{background:#4752c4;}
   
   <!-- COLUMNA 4: LISTA DE MIEMBROS -->
   <div class="member-list">
-    <div class="member-title" id="membersTitle">Miembros</div>
+    <div class="member-title" id="membersTitle">Tus Contactos</div>
     <div id="members-container"></div>
   </div>
 </div>
@@ -197,7 +213,7 @@ const db = getDatabase(app);
 
 let messages = [];
 let cacheUsers = {};
-let isDMMode = true; // Empieza en modo Mensajes Directos por defecto
+let isDMMode = true; 
 let currentGuildId = "DM"; 
 let currentChannelId = "";
 let unreadCount = 0;
@@ -222,21 +238,6 @@ function parseMarkdown(text) {
     .replace(/~~([\s\S]+?)~~/g, '<del>$1</del>')                       
     .replace(/`([^`]+)`/g, '<code>$1</code>');                        
   return html;
-}
-
-function playNotificationSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(580, ctx.currentTime);
-    osc.frequency.setValueAtTime(900, ctx.currentTime + 0.07);
-    gain.gain.setValueAtTime(0.08, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(); osc.stop(ctx.currentTime + 0.25);
-  } catch(e){}
 }
 
 window.check = () => {
@@ -285,7 +286,6 @@ function renderMessages(){
   box.scrollTop = box.scrollHeight;
 }
 
-// Alternar al Modo de Mensajes Directos (Botón de arriba)
 window.selectDMMode = () => {
   isDMMode = true;
   currentGuildId = "DM";
@@ -297,7 +297,6 @@ window.selectDMMode = () => {
   loadChannelsAndMembers();
 };
 
-// Escuchar lista de Servidores de Discord
 onValue(ref(db, "guilds"), snap => {
   const container = document.getElementById("guildsContainer");
   container.innerHTML = "";
@@ -340,7 +339,6 @@ function loadChannelsAndMembers() {
     document.getElementById("currentGuildName").innerText = "Mensajes Directos";
     document.getElementById("membersTitle").innerText = "Tus Contactos";
 
-    // Cargar canales de mensajes directos privados
     onValue(ref(db, "dmChannels"), snap => {
       channelContainer.innerHTML = "";
       const dms = snap.val();
@@ -367,7 +365,6 @@ function loadChannelsAndMembers() {
       renderMessages();
     });
 
-    // En modo DM, la lista de miembros de la derecha muestra a todos tus amigos de chat privados
     onValue(ref(db, "dmChannels"), snap => {
       const memberContainer = document.getElementById("members-container");
       memberContainer.innerHTML = "";
@@ -392,7 +389,6 @@ function loadChannelsAndMembers() {
     });
 
   } else {
-    // MODO SERVIDORES NORMAL
     document.getElementById("membersTitle").innerText = "Miembros";
     onValue(ref(db, `guilds/${currentGuildId}`), gSnap => {
       const g = gSnap.val();
@@ -462,7 +458,6 @@ function loadChannelsAndMembers() {
   }
 }
 
-// Capturar tanto mensajes de canales como de Mensajes Directos (DMs) privados
 onChildAdded(ref(db,"discordMessages"), snap=>{
   const msg = snap.val();
   messages.push(msg);
@@ -482,7 +477,6 @@ onChildAdded(ref(db,"discordMessages"), snap=>{
   }
 
   renderMessages();
-  if (!isTabFocused) { unreadCount++; document.title = `(${unreadCount}) 🔴 KoriCord`; playNotificationSound(); }
 });
 
 onChildAdded(ref(db,"webMessages"), snap=>{
@@ -516,7 +510,9 @@ window.openProfile = (uid) => {
       rolesBox.appendChild(badge);
     });
   } else { rolesBox.innerText = "Ninguno"; }
-  document.getElementById("profileModal").style.display = "flex";
+  
+  const modal = document.getElementById("profileModal");
+  modal.style.display = "flex";
 };
 
 window.closeProfile = () => { document.getElementById("profileModal").style.display = "none"; };
