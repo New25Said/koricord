@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KoriCord Futurist</title>
+  <title>KoriCord</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- 🔐 PANTALLA DE LOGIN -->
   <div id="loginScreen" class="login-screen">
     <div class="login-box">
       <h3>¿Eres Kori?</h3>
@@ -18,10 +17,8 @@
     </div>
   </div>
 
-  <!-- 🏢 INTERFAZ PRINCIPAL -->
   <div class="app-container">
     
-    <!-- Servidores (Estilo Discord de iconos a la izquierda) -->
     <div class="guilds-sidebar">
       <div class="guild-icon-wrap" id="guildWrapper">
         <div class="guild-icon" id="guildIcon">K</div>
@@ -29,22 +26,24 @@
       </div>
     </div>
 
-    <!-- Canales -->
     <div class="sidebar">
       <div class="sidebar-header">
         <h2 id="serverTitle">KoriCord</h2>
         <div class="sub">2PyM 🌐</div>
       </div>
       <div class="channels-list" id="channelsList">
-        <!-- Los canales se inyectan en tiempo real -->
-      </div>
+        </div>
     </div>
 
-    <!-- Chat -->
     <div class="chat">
       <div class="chat-header">
-        <span class="hashtag">#</span>
-        <span id="currentChannelName">general</span>
+        <div class="header-left">
+          <span class="hashtag">#</span>
+          <span id="currentChannelName">general</span>
+        </div>
+        <button class="toggle-members-btn" onclick="toggleMembersList()">
+          👥 Miembros
+        </button>
       </div>
       
       <div id="messages" class="messages"></div>
@@ -57,9 +56,14 @@
       </div>
     </div>
 
+    <div class="members-sidebar" id="membersSidebar">
+      <div class="members-title">MIEMBROS</div>
+      <div class="members-list" id="membersList">
+        </div>
+    </div>
+
   </div>
 
-  <!-- Lógica de Firebase y de la App -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
