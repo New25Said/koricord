@@ -29,7 +29,11 @@ let isWindowFocused = true;
 let unreadCount = 0;
 let lastMessageDividerAdded = false;
 
-// Monitorear foco de la pestaña del navegador
+// Crear elemento global Popout de Perfil una sola vez
+const popout = document.createElement("div");
+popout.className = "profile-popout";
+document.body.appendChild(popout);
+
 window.addEventListener("focus", () => {
   isWindowFocused = true;
   unreadCount = 0;
@@ -40,7 +44,6 @@ window.addEventListener("blur", () => {
   isWindowFocused = false;
 });
 
-// Función nativa para emitir sonido de notificación de Discord sin archivos externos
 function playNotificationSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -48,7 +51,7 @@ function playNotificationSound() {
     const gain = ctx.createGain();
     
     osc.type = "sine";
-    osc.frequency.setValueAtTime(550, ctx.currentTime); // Tono Discord
+    osc.frequency.setValueAtTime(550, ctx.currentTime);
     osc.frequency.setValueAtTime(440, ctx.currentTime + 0.08);
     
     gain.gain.setValueAtTime(0.15, ctx.currentTime);
@@ -59,18 +62,14 @@ function playNotificationSound() {
     
     osc.start();
     osc.stop(ctx.currentTime + 0.25);
-  } catch (e) {
-    console.log("Audio esperando interacción del usuario.");
-  }
+  } catch (e) {}
 }
 
-// Mostrar/Ocultar lista de miembros
 window.toggleMembersList = function() {
   const sidebar = document.getElementById("membersSidebar");
   sidebar.classList.toggle("hidden");
 };
 
-// Login global
 window.checkLogin = function() {
   const pass = document.getElementById("loginInput").value;
   if(pass === "soykori") {
@@ -96,7 +95,7 @@ function initApp() {
     }
   });
 
-  // 2. Información del Servidor y Canales
+  // 2. Info de Servidor e Inyección Instantánea de Canales
   onValue(ref(db, "serverConfig"), (snap) => {
     const data = snap.val();
     if (!data) return;
@@ -117,7 +116,6 @@ function initApp() {
       data.channels.forEach((ch, idx) => {
         const wrap = document.createElement("div");
         wrap.className = "channel-wrap";
-        wrap.id = `wrap-${ch.id}`;
 
         const btn = document.createElement("div");
         btn.className = `channel-btn ${currentChannelId === ch.id || (!currentChannelId && idx === 0) ? 'active' : ''}`;
@@ -140,7 +138,7 @@ function initApp() {
     }
   });
 
-  // 3. Cargar Miembros y Estados en Vivo
+  // 3. Miembros con Perfil Detallado (Hover Popout Activo)
   onValue(ref(db, "serverMembers"), (snap) => {
     const members = snap.val();
     const container = document.getElementById("membersList");
@@ -168,11 +166,50 @@ function initApp() {
         info.className = "member-info";
         info.innerHTML = `
           <div class="member-name">${m.nickname || m.username}</div>
-          <div class="member-sub">${m.isBot ? '🤖 BOT' : `@${m.username}`}</div>
+          <div class="member-sub">${m.customStatus ? m.customStatus : (m.isBot ? '🤖 BOT' : `@${m.username}`)}</div>
         `;
 
         item.appendChild(avContainer);
         item.appendChild(info);
+
+        // Lógica Hover para mostrar Tarjeta de Perfil al pasar el cursor
+        item.onmouseenter = (e) => {
+          const rect = item.getBoundingClientRect();
+          popout.style.top = `${rect.top - 10}px`;
+          
+          let popoutAvatarHtml = m.avatar 
+            ? `<img class="popout-avatar" src="${m.avatar}">`
+            : `<div class="popout-avatar">${(m.nickname || m.username || "?")[0].toUpperCase()}</div>`;
+
+          popout.innerHTML = `
+            <div class="popout-banner" style="background-color: ${m.bannerColor || '#5865f2'};"></div>
+            <div class="popout-avatar-wrap">${popoutAvatarHtml}</div>
+            <div class="popout-body">
+              <div class="popout-names">
+                <div class="popout-nick">${m.nickname || m.username}</div>
+                <div class="popout-user">@${m.username}</div>
+              </div>
+              ${m.customStatus ? `
+                <div>
+                  <div class="popout-section-title">ESTADO</div>
+                  <div class="popout-text">${m.customStatus}</div>
+                </div>
+              ` : ''}
+              ${m.activity ? `
+                <div>
+                  <div class="popout-section-title">ACTIVIDAD</div>
+                  <div class="popout-text">${m.activity}</div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+          popout.style.display = "flex";
+        };
+
+        item.onmouseleave = () => {
+          popout.style.display = "none";
+        };
+
         container.appendChild(item);
       });
     }
@@ -197,7 +234,7 @@ function initApp() {
     }, 2000);
   });
 
-  // Escuchar Mensajes entrantes
+  // Mensajes Entrantes
   onChildAdded(ref(db, "discordMessages"), (snap) => {
     processMessage(snap.val(), "discord");
   });
@@ -217,7 +254,6 @@ function switchChannel(id, name) {
     else btn.classList.remove("active");
   });
 
-  // Quitar el puntito rojo del canal al entrar
   const badge = document.getElementById(`badge-${id}`);
   if (badge) badge.style.display = "none";
 
@@ -234,29 +270,26 @@ function clearUnreadDividers() {
 function processMessage(data, type) {
   const targetChannelId = data.channelId || currentChannelId;
   
-  // Alerta de Notificación si llega un mensaje a otro canal o estando inactivo
   if (targetChannelId !== currentChannelId || !isWindowFocused) {
     playNotificationSound();
     
-    // Poner circulito rojo en la lista de canales si no estás ahí
     if (targetChannelId !== currentChannelId) {
       const badge = document.getElementById(`badge-${targetChannelId}`);
       if (badge) badge.style.display = "block";
     }
 
-    // Actualizar bolita de notificación en la pestaña del navegador
     if (!isWindowFocused) {
       unreadCount++;
       document.title = `🔴 (${unreadCount}) KoriCord Futurist`;
     }
   }
 
-  // Crear separador rojo de "No Leído" si corresponde
+  // Generar Línea Roja Estructural de No Leído
   if (!isWindowFocused && targetChannelId === currentChannelId && !lastMessageDividerAdded) {
     const divider = document.createElement("div");
     divider.className = "unread-divider";
     divider.innerHTML = "<span>NUEVOS MENSAJES</span>";
-    divider.dataset.time = (data.timestamp || data.time) - 1; // Un milisegundo antes
+    divider.dataset.time = (data.timestamp || data.time) - 1;
     document.getElementById("messages").appendChild(divider);
     lastMessageDividerAdded = true;
   }
@@ -322,7 +355,7 @@ function filterMessages() {
   
   for (let child of children) {
     if (!child.dataset.channelId || child.dataset.channelId === currentChannelId) {
-      child.style.display = child.classList.contains("unread-divider") ? "flex" : "flex";
+      child.style.display = "flex";
     } else {
       child.style.display = "none";
     }
@@ -330,7 +363,6 @@ function filterMessages() {
   container.scrollTop = container.scrollHeight;
 }
 
-// Enviar mensaje
 window.sendMessage = async function(){
   const text = document.getElementById("msg").value;
   if(!text) return;
