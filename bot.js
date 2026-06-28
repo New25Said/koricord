@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits } from "discord.js";
+import { Client, GatewayIntentBits, Partials } from "discord.js";
 import express from "express";
 import admin from "firebase-admin";
 
@@ -15,7 +15,6 @@ const db = admin.database();
 /* 🌐 WEB SERVER */
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 app.use(express.static("public"));
 app.listen(PORT, () => { console.log("🌐 Web activa en Render"); });
 
@@ -27,8 +26,11 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildPresences, 
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessageTyping 
-  ]
+    GatewayIntentBits.GuildMessageTyping,
+    GatewayIntentBits.DirectMessages, 
+    GatewayIntentBits.DirectMessageTyping
+  ],
+  partials: [Partials.Channel, Partials.Message]
 });
 
 function getMemberActivity(member) {
@@ -36,8 +38,7 @@ function getMemberActivity(member) {
   for (const activity of member.presence.activities) {
     if (activity.name === "Custom Status") {
       if(!activity.state) return null;
-      let cleanState = activity.state.replace(/<a?:.+?:\d+>/g, '✨');
-      return `✨ ${cleanState}`;
+      return `✨ ${activity.state.replace(/<a?:.+?:\d+>/g, '✨')}`;
     }
     if (activity.type === 2) return `🎧 Escuchando ${activity.name}`;
     if (activity.type === 0) return `🎮 Jugando a ${activity.name}`;
@@ -45,37 +46,24 @@ function getMemberActivity(member) {
   return member.presence.activities[0].name ? `✨ ${member.presence.activities[0].name}` : null;
 }
 
-// Sincronización Estructurada Completa (Servidores, Canales, Roles y Miembros)
+// Sincronización fija (Bug Resuelto: Ya no borra canales ni servidores enteros con .remove())
 async function syncDeepDiscordStructure() {
-  console.log("🔄 Ejecutando sincronización de canales, roles y servidores...");
   const guilds = client.guilds.cache.values();
-
   for (const guild of guilds) {
     try {
       const iconUrl = guild.iconURL({ extension: 'png', size: 128 }) || null;
-      await db.ref(`guilds/${guild.id}`).update({
-        id: guild.id,
-        name: guild.name,
-        iconUrl: iconUrl
-      });
+      await db.ref(`guilds/${guild.id}`).update({ id: guild.id, name: guild.name, iconUrl: iconUrl });
 
-      // Sincronizar canales existentes (si se borró alguno, limpiamos la lista primero)
-      await db.ref(`channels/${guild.id}`).remove();
       const channels = await guild.channels.fetch();
       channels.forEach(ch => {
         if (ch.isTextBased()) {
-          db.ref(`channels/${guild.id}/${ch.id}`).set({
-            id: ch.id,
-            name: ch.name
-          });
+          db.ref(`channels/${guild.id}/${ch.id}`).update({ id: ch.id, name: ch.name });
         }
       });
 
-      // Sincronizar roles y miembros
       const members = await guild.members.fetch({ withPresences: true });
       members.forEach(member => {
         if (member.user.bot) return;
-
         const status = member.presence?.status || "offline";
         const activityText = getMemberActivity(member);
         const roles = member.roles.cache.filter(r => r.name !== "@everyone").map(r => r.name);
@@ -91,23 +79,16 @@ async function syncDeepDiscordStructure() {
           roles: roles
         });
       });
-    } catch (e) {
-      console.error(`Error sincronizando servidor ${guild.name}:`, e);
-    }
+    } catch (e) { console.error(e); }
   }
 }
 
 client.once("ready", () => {
   console.log(`🤖 Logueado como ${client.user.tag}`);
   syncDeepDiscordStructure();
-
-  // 🕒 TEMPORIZADOR AUTOMÁTICO: Escanea y actualiza canales y roles cada 5 minutos de forma silenciosa
-  setInterval(() => {
-    syncDeepDiscordStructure();
-  }, 5 * 60 * 1000); 
+  setInterval(syncDeepDiscordStructure, 5 * 60 * 1000); 
 });
 
-/* 🟢 CAMBIOS DE PRESENCIA / JUEGOS EN VIVO */
 client.on("presenceUpdate", (oldPresence, newPresence) => {
   if (!newPresence || newPresence.user.bot) return;
   const member = newPresence.member;
@@ -128,19 +109,9 @@ client.on("presenceUpdate", (oldPresence, newPresence) => {
   });
 });
 
-/* ✍️ TYPING INDICATOR */
-let typingTimeout;
-client.on("typingStart", (typing) => {
-  if (typing.user.bot) return;
-  db.ref("typing/discord").set({ username: typing.user.username, time: Date.now() });
-  clearTimeout(typingTimeout);
-  typingTimeout = setTimeout(() => { db.ref("typing/discord").remove(); }, 5000);
-});
-
-/* 💬 MENSAJES DISCORD → WEB */
+/* 💬 DISCORD → FIREBASE */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
-  db.ref("typing/discord").remove();
 
   let attachments = [];
   if (message.attachments.size > 0) {
@@ -152,13 +123,24 @@ client.on("messageCreate", async (message) => {
     });
   }
 
+  const isDM = !message.guild; 
+  const guildId = isDM ? "DM" : message.guild.id;
+
+  if(isDM) {
+    await db.ref(`dmChannels/${message.channel.id}`).update({
+      id: message.channel.id,
+      name: message.author.globalName || message.author.username,
+      avatar: message.author.displayAvatarURL({ extension: 'png', size: 128 })
+    });
+  }
+
   await db.ref("discordMessages").push({
-    nickname: message.member?.displayName || message.author.username,
+    nickname: isDM ? (message.author.globalName || message.author.username) : (message.member?.displayName || message.author.username),
     username: message.author.username,
     avatar: message.author.displayAvatarURL({ extension: 'png', size: 128 }),
     text: message.content,
     attachments: attachments,
-    guildId: message.guild.id, // Guardamos el ID del server de procedencia para las burbujas web
+    guildId: guildId, 
     channelId: message.channel.id, 
     timestamp: Date.now()
   });
@@ -175,9 +157,7 @@ db.ref("webMessages").on("child_added", async (snap) => {
     if (channel && channel.isTextBased()) {
       await channel.send(data.text);
     }
-  } catch (err) {
-    console.error("Error al retransmitir mensaje:", err);
-  }
+  } catch (err) { console.error("Error al retransmitir:", err); }
 });
 
 client.login(process.env.DISCORD_TOKEN);
