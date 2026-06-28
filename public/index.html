@@ -1,80 +1,53 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>KoriCord</title>
-
-<style>
-/* Estilo AMOLED Premium - Perfección en tonos oscuros */
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>KoriCord</title><style>
 body{margin:0;font-family:Arial, sans-serif;background:#111214;color:white;height:100vh;overflow:hidden;}
 #login{position:fixed;inset:0;background:#1e1f22;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:200;}
 input,button{padding:10px;border-radius:6px;border:none;outline:none;}
-button{background:#5865f2;color:white;cursor:pointer;font-weight:bold;transition: background 0.2s, transform 0.2s;}
-button:hover{background:#4752c4; transform: scale(1.02);}
-
+button{background:#5865f2;color:white;cursor:pointer;font-weight:bold;transition:background 0.2s,transform 0.2s;}
+button:hover{background:#4752c4;transform:scale(1.02);}
 .app-container{display:none;height:100vh;width:100vw;}
-
-/* COLUMNA 1: Barra de Servidores */
 .guilds-sidebar{width:72px;background:#1e1f22;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:8px;border-right:1px solid #111214;overflow-y:auto;flex-shrink:0;}
-.guild-icon{width:48px;height:48px;border-radius:50%;background:#2b2d31;color:#dbdee1;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold;cursor:pointer;transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);overflow:hidden;position:relative;}
-.guild-icon img{width:100%;height:100%;object-fit:cover;transition: transform 0.2s;}
-.guild-icon:hover img{transform: scale(1.08);}
-.guild-icon:hover, .guild-icon.active{border-radius:16px;background:#5865f2;color:white;}
+.guild-icon{width:48px;height:48px;border-radius:50%;background:#2b2d31;color:#dbdee1;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold;cursor:pointer;transition:all 0.25s cubic-bezier(0.4, 0, 0.2, 1);overflow:hidden;position:relative;}
+.guild-icon img{width:100%;height:100%;object-fit:cover;transition:transform 0.2s;}
+.guild-icon:hover img{transform:scale(1.08);}
+.guild-icon:hover,.guild-icon.active{border-radius:16px;background:#5865f2;color:white;}
 .guild-separator{width:32px;height:2px;background:#2b2d31;margin:4px 0;border-radius:1px;}
-
-.dm-icon-svg {width:26px; height:26px; fill:currentColor; transition: transform 0.2s;}
-.guild-icon:hover .dm-icon-svg {transform: rotate(6deg) scale(1.05);}
-
-/* Burbujas Rojas de Notificación */
-.guild-badge {position:absolute;bottom:0;right:0;width:12px;height:12px;background:#f23f43;border-radius:50%;border:2px solid #1e1f22;display:none;}
-.guild-icon.unread .guild-badge {display:block;}
-
-/* COLUMNA 2: Canales / Chats Privados */
+.dm-icon-svg {width:26px;height:26px;fill:currentColor;transition:transform 0.2s;}
+.guild-icon:hover .dm-icon-svg {transform:rotate(6deg) scale(1.05);}
+.guild-badge{position:absolute;bottom:0;right:0;width:12px;height:12px;background:#f23f43;border-radius:50%;border:2px solid #1e1f22;display:none;animation:pop 0.25s ease;}
+.guild-icon.unread .guild-badge{display:block;}
 .channels-sidebar{width:220px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:4px;border-right:1px solid #1c1d1f;overflow-y:auto;flex-shrink:0;}
 .sidebar-title{font-size:12px;font-weight:bold;color:#949ba4;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.channel-btn{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:4px;color:#949ba4;cursor:pointer;font-size:14px;font-weight:500;transition: all 0.15s ease;}
-.channel-btn:hover{background:#35373c;color:#dbdee1;}
-.channel-btn.active{background:#404249;color:white;}
+.channel-btn{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:4px;color:#949ba4;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.15s ease;}
+.channel-btn:hover{background:#35373c;color:#dbdee1;padding-left:12px;}
+.channel-btn.active{background:#404249;color:white;padding-left:12px;}
 .channel-name-wrapper{display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
-
 .is-channel .channel-name-wrapper::before{content:"#";font-size:18px;color:#80848e;}
-.is-dm .channel-name-wrapper::before{content:"👤";font-size:14px;}
-
-.channel-badge {width:8px;height:8px;background:#ffffff;border-radius:50%;display:none;}
-.channel-btn.unread .channel-badge {display:block;}
-
-/* COLUMNA 3: Chat Central */
+.channel-badge{width:8px;height:8px;background:#ffffff;border-radius:50%;display:none;}
+.channel-btn.unread .channel-badge{display:block;}
+.is-dm-btn{display:flex;align-items:center;gap:12px;padding:8px;border-radius:4px;color:#949ba4;cursor:pointer;font-size:14px;font-weight:500;transition:all 0.15s ease;}
+.is-dm-btn:hover{background:#35373c;color:#dbdee1;}
+.is-dm-btn.active{background:#404249;color:white;}
 .chat-area{flex:1;display:flex;flex-direction:column;height:100vh;background:#313338;position:relative;min-width:0;}
 .messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:4px;}
-
-/* Pantalla de inicio o sección vacía en DMs similar a la captura */
 .dm-placeholder{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#949ba4;background:#313338;}
 .dm-placeholder h3{color:#f2f3f5;margin-bottom:4px;}
-
-/* COLUMNA 4: Miembros / Contactos */
 .member-list{width:240px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:8px;border-left:1px solid #1c1d1f;overflow-y:auto;flex-shrink:0;}
-
-/* Avatares y Estados finos de Discord */
 .avatar-container{position:relative;width:38px;height:38px;flex-shrink:0;}
 .avatar{width:38px;height:38px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:bold;}
 .avatar img{width:100%;height:100%;object-fit:cover;}
-
 .status-dot{position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;border:3px solid #2b2d31;}
 .status-online{background:#23a55a;}
-.status-idle{background:#f0b232; border-radius: 50% 0 50% 50%; transform: rotate(-45deg); width: 10px; height: 10px; bottom: 0px; right: 0px;}
+.status-idle{background:#f0b232;border-radius:50% 0 50% 50%;transform:rotate(-45deg);width:10px;height:10px;bottom:0px;right:0px;}
 .status-dnd{background:#f23f43;}
-.status-dnd::after{content:""; position:absolute; width:6px; height:2px; background:#2b2d31; top:50%; left:50%; transform:translate(-50%, -50%);}
+.status-dnd::after{content:"";position:absolute;width:6px;height:2px;background:#2b2d31;top:50%;left:50%;transform:translate(-50%,-50%);}
 .status-offline{background:#80848e;}
-
-.member-card{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:4px;cursor:pointer;transition: all 0.15s ease;}
-.member-card:hover{background:#35373c;transform: translateX(2px);}
+.member-card{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:4px;cursor:pointer;transition:all 0.15s ease;}
+.member-card:hover{background:#35373c;transform:translateX(2px);}
 .user-info{display:flex;flex-direction:column;min-width:0;flex:1;}
 .member-nick{font-weight:500;font-size:14px;color:#f2f3f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .member-user{font-size:11px;color:#949ba4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .member-activity{font-size:11px;color:#b5bac1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;font-style:italic;}
-
-/* Mensajes */
-.msg{display:flex;gap:16px;padding:4px 8px;border-radius:4px;animation: fadeIn 0.15s ease-out;}
+.msg{display:flex;gap:16px;padding:4px 8px;border-radius:4px;animation:fadeIn 0.15s ease-out;}
 .msg:hover{background:#2e3035;}
 .msg-content{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
 .top{display:flex;align-items:baseline;gap:8px;}
@@ -82,46 +55,31 @@ button:hover{background:#4752c4; transform: scale(1.02);}
 .sub-user{font-size:11px;color:#949ba4;}
 .time{font-size:11px;color:#949ba4;}
 .text{color:#dbdee1;font-size:15px;word-break:break-word;line-height:1.4;}
-
-.text code {background:#1e1f22; padding:2px 4px; border-radius:4px; font-family:monospace; font-size:14px; color:#e0c89a;}
+.text code {background:#1e1f22;padding:2px 4px;border-radius:4px;font-family:monospace;font-size:14px;color:#e0c89a;}
 .media-attachment{margin-top:6px;max-width:400px;}
-.media-attachment img, .media-attachment video{max-width:100%;max-height:280px;border-radius:6px;}
-
+.media-attachment img,.media-attachment video{max-width:100%;max-height:280px;border-radius:6px;}
 .input-box{padding:0 16px 24px 16px;background:#313338;position:relative;}
 .input-box input{width:100%;background:#383a40;color:#dbdee1;padding:12px;box-sizing:border-box;font-size:15px;border-radius:8px;border:none;}
 .typing-indicator{position:absolute;top:-18px;left:20px;font-size:12px;color:#abcdef;height:14px;}
-
-/* Modal Perfil */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:250;align-items:center;justify-content:center;backdrop-filter: blur(1px);}
-.profile-modal{width:300px;background:#18191c;border-radius:8px;overflow:hidden;box-shadow:0 8px 16px rgba(0,0,0,0.5);}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:250;align-items:center;justify-content:center;backdrop-filter:blur(1px);}
+.profile-modal{width:300px;background:#18191c;border-radius:8px;overflow:hidden;box-shadow:0 8px 16px rgba(0,0,0,0.5);animation:scaleUp 0.18s cubic-bezier(0.34,1.56,0.64,1);}
 .profile-banner{height:60px;background:#5865f2;}
 .profile-header{padding:0 16px 16px 16px;position:relative;border-bottom:1px solid #232428;}
 .profile-modal-avatar{width:80px;height:80px;border-radius:50%;border:6px solid #18191c;background:#5865f2;overflow:hidden;position:absolute;top:-40px;left:16px;}
 .profile-modal-avatar img{width:100%;height:100%;object-fit:cover;}
-
-.profile-names{margin-top: 52px;} 
+.profile-names{margin-top:52px;}
 .profile-nick{font-size:20px;font-weight:bold;color:white;}
 .profile-user{font-size:14px;color:#b5bac1;margin-top:2px;}
 .profile-body{padding:16px;display:flex;flex-direction:column;gap:12px;font-size:13px;}
 .profile-section-title{font-size:11px;font-weight:bold;color:#949ba4;text-transform:uppercase;letter-spacing:0.5px;}
 .profile-roles{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
 .role-badge{background:#2b2d31;color:#dbdee1;padding:4px 8px;border-radius:4px;font-size:12px;border:1px solid #35373c;}
-
-@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-</style>
-</head>
-
-<body>
-
-<div id="login">
-<h2>¿Eres Kori?</h2>
-<input id="code" type="password" placeholder="escribe: soykori">
-<button onclick="check()">Entrar</button>
-<p id="err" style="color:#fa777c; font-size:14px;"></p>
-</div>
-
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px);} to{opacity:1;transform:translateY(0);} }
+@keyframes scaleUp { from{transform:scale(0.9);opacity:0;} to{transform:scale(1);opacity:1;} }
+@keyframes pop { 0%{transform:scale(0);} 100%{transform:scale(1);} }
+</style></head><body>
+<div id="login"><h2>¿Eres Kori?</h2><input id="code" type="password" placeholder="escribe: soykori"><button onclick="check()">Entrar</button><p id="err" style="color:#fa777c; font-size:14px;"></p></div>
 <div class="app-container" id="app">
-  <!-- COLUMNA 1 -->
   <div class="guilds-sidebar">
     <div class="guild-icon active" id="dmServerBtn" title="Mensajes Directos" onclick="selectDMMode()">
       <svg class="dm-icon-svg" viewBox="0 0 127.14 96.36"><path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36a77.7,77.7,0,0,0,6.63-10.85,68.43,68.43,0,0,1-10.43-5c.56-.41,1.11-.84,1.64-1.28A75.48,75.48,0,0,0,100,79.24c.53.44,1.08.87,1.64,1.28a68.43,68.43,0,0,1-10.43,5A77.7,77.7,0,0,0,97.83,96.36a105.73,105.73,0,0,0,31-18.83C130,50.12,123.83,27.23,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.83,46,53.83,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.07,46,96.07,53,91,65.69,84.69,65.69Z"/></svg>
@@ -130,69 +88,26 @@ button:hover{background:#4752c4; transform: scale(1.02);}
     <div class="guild-separator"></div>
     <div id="guildsContainer" style="display:contents;"></div>
   </div>
-
-  <!-- COLUMNA 2 -->
   <div class="channels-sidebar">
     <div class="sidebar-title" id="currentGuildName">Mensajes Directos</div>
     <div id="channels-container"></div>
   </div>
-
-  <!-- COLUMNA 3 -->
   <div class="chat-area" id="chatArea">
-    <!-- Vista por defecto si no hay chat abierto -->
-    <div class="dm-placeholder" id="placeholderView">
-      <h3>Activo ahora</h3>
-      <p>Por ahora está todo tranquilo... Elige una conversación.</p>
-    </div>
-    
-    <!-- Contenedor del Chat real -->
+    <div class="dm-placeholder" id="placeholderView"><h3>Activo ahora</h3><p>Por ahora está todo tranquilo... Elige una conversación.</p></div>
     <div id="mainChatContent" style="display:none; flex:1; flex-direction:column;">
       <div id="messages" class="messages"></div>
-      <div class="input-box">
-        <div id="typing" class="typing-indicator"></div>
-        <input id="msg" placeholder="Enviar mensaje..." />
-      </div>
+      <div class="input-box"><div id="typing" class="typing-indicator"></div><input id="msg" placeholder="Enviar mensaje..." /></div>
     </div>
   </div>
-  
-  <!-- COLUMNA 4 -->
   <div class="member-list">
     <div class="member-title" id="membersTitle">Tus Contactos</div>
     <div id="members-container"></div>
   </div>
 </div>
-
-<!-- MODAL PERFIL -->
-<div class="modal-overlay" id="profileModal" onclick="closeProfile()">
-  <div class="profile-modal" onclick="event.stopPropagation()">
-    <div class="profile-banner"></div>
-    <div class="profile-header">
-      <div class="profile-modal-avatar" id="modalAvatar"></div>
-      <div class="profile-names">
-        <div class="profile-nick" id="modalNick">-</div>
-        <div class="profile-user" id="modalUser">@unknown</div>
-      </div>
-    </div>
-    <div class="profile-body">
-      <div>
-        <div class="profile-section-title">Actividad Actual</div>
-        <div style="color:#dbdee1; margin-top:4px;" id="modalActivity">Ninguna</div>
-      </div>
-      <div>
-        <div class="profile-section-title">Miembro Desde</div>
-        <div style="color:#dbdee1; margin-top:4px;" id="modalJoined">-</div>
-      </div>
-      <div>
-        <div class="profile-section-title">Roles</div>
-        <div class="profile-roles" id="modalRoles">Ninguno</div>
-      </div>
-    </div>
-  </div>
-</div>
-
+<div class="modal-overlay" id="profileModal" onclick="closeProfile()"><div class="profile-modal" onclick="event.stopPropagation()"><div class="profile-banner"></div><div class="profile-header"><div class="profile-modal-avatar" id="modalAvatar"></div><div class="profile-names"><div class="profile-nick" id="modalNick">-</div><div class="profile-user" id="modalUser">@unknown</div></div></div><div class="profile-body"><div><div class="profile-section-title">Actividad Actual</div><div style="color:#dbdee1; margin-top:4px;" id="modalActivity">Ninguna</div></div><div><div class="profile-section-title">Miembro Desde</div><div style="color:#dbdee1; margin-top:4px;" id="modalJoined">-</div></div><div><div class="profile-section-title">Roles</div><div class="profile-roles" id="modalRoles">Ninguno</div></div></div></div></div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded, onValue } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
+import { getDatabase, ref, push, onChildAdded, onValue, set } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
 const firebaseConfig = {
 apiKey:"AIzaSyARq5j8Kf9p4SYj4sj3167BjVD-Q4KczQE",
@@ -214,14 +129,13 @@ let currentGuildId = "DM";
 let currentChannelId = "";
 let unreadCount = 0;
 let isTabFocused = true;
+let unreadChannels = {};
+let unreadGuilds = {};
 
 window.addEventListener('focus', () => { isTabFocused = true; unreadCount = 0; document.title = "KoriCord"; });
 window.addEventListener('blur', () => { isTabFocused = false; });
 
-function escapeHTML(text) {
-  return text ? text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : "";
-}
-
+function escapeHTML(text) { return text ? text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ""; }
 function parseMarkdown(text) {
   return escapeHTML(text)
     .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')           
@@ -259,13 +173,11 @@ window.check = () => {
 function renderMessages(){
   const box = document.getElementById("messages");
   box.innerHTML = "";
-  
   if(!currentChannelId) {
     document.getElementById("placeholderView").style.display = "flex";
     document.getElementById("mainChatContent").style.display = "none";
     return;
   }
-  
   document.getElementById("placeholderView").style.display = "none";
   document.getElementById("mainChatContent").style.display = "flex";
   
@@ -273,10 +185,8 @@ function renderMessages(){
   filtered.sort((a,b)=>a.timestamp-b.timestamp);
 
   for(const m of filtered){
-    const div = document.createElement("div");
-    div.className="msg";
+    const div = document.createElement("div"); div.className="msg";
     const avatarHtml = m.avatar ? `<img src="${m.avatar}">` : (m.nickname || "K")[0];
-    
     let attachmentHtml = "";
     if(m.attachments){
       for(const att of m.attachments){
@@ -284,27 +194,14 @@ function renderMessages(){
         if(att.type === "video") attachmentHtml += `<div class="media-attachment"><video src="${att.url}" controls></video></div>`;
       }
     }
-
-    div.innerHTML = `
-    <div class="avatar-container"><div class="avatar">${avatarHtml}</div></div>
-    <div class="msg-content">
-      <div class="top">
-        <span class="name">${m.nickname || m.username}</span>
-        <span class="sub-user">@${m.username || 'kori'}</span>
-        <span class="time">${new Date(m.timestamp).toLocaleTimeString()}</span>
-      </div>
-      <div class="text">${parseMarkdown(m.text)}</div>
-      ${attachmentHtml}
-    </div>`;
+    div.innerHTML = `<div class="avatar-container"><div class="avatar">${avatarHtml}</div></div><div class="msg-content"><div class="top"><span class="name">${m.nickname || m.username}</span><span class="sub-user">@${m.username || 'kori'}</span><span class="time">${new Date(m.timestamp).toLocaleTimeString()}</span></div><div class="text">${parseMarkdown(m.text)}</div>${attachmentHtml}</div>`;
     box.appendChild(div);
   }
   box.scrollTop = box.scrollHeight;
 }
 
 window.selectDMMode = () => {
-  isDMMode = true;
-  currentGuildId = "DM";
-  currentChannelId = "";
+  isDMMode = true; currentGuildId = "DM"; currentChannelId = "";
   document.querySelectorAll('.guild-icon').forEach(i => i.classList.remove('active'));
   document.getElementById("dmServerBtn").classList.add('active');
   document.getElementById("dmServerBtn").classList.remove('unread');
@@ -312,55 +209,43 @@ window.selectDMMode = () => {
 };
 
 onValue(ref(db, "guilds"), snap => {
-  const container = document.getElementById("guildsContainer");
-  container.innerHTML = "";
-  const guilds = snap.val();
-  if(!guilds) return;
-
+  const container = document.getElementById("guildsContainer"); container.innerHTML = "";
+  const guilds = snap.val(); if(!guilds) return;
   Object.values(guilds).forEach(g => {
-    const iconBtn = document.createElement("div");
-    iconBtn.id = `guild-node-${g.id}`;
+    const iconBtn = document.createElement("div"); iconBtn.id = `guild-node-${g.id}`;
     iconBtn.className = `guild-icon ${(!isDMMode && g.id === currentGuildId) ? 'active' : ''}`;
     iconBtn.title = g.name;
     iconBtn.innerHTML = g.iconUrl ? `<img src="${g.iconUrl}"><div class="guild-badge"></div>` : `${g.name.split(" ").map(w=>w[0]).join("")}<div class="guild-badge"></div>`;
-
     iconBtn.onclick = () => {
-      isDMMode = false;
-      currentGuildId = g.id;
-      iconBtn.classList.remove('unread');
+      isDMMode = false; currentGuildId = g.id; iconBtn.classList.remove('unread');
       document.querySelectorAll('.guild-icon').forEach(i => i.classList.remove('active'));
-      iconBtn.classList.add('active');
-      currentChannelId = ""; 
-      loadChannelsAndMembers();
+      iconBtn.classList.add('active'); currentChannelId = ""; loadChannelsAndMembers();
     };
     container.appendChild(iconBtn);
   });
 });
 
 function loadChannelsAndMembers() {
-  const channelContainer = document.getElementById("channels-container");
-  channelContainer.innerHTML = "";
-
+  const channelContainer = document.getElementById("channels-container"); channelContainer.innerHTML = "";
   if (isDMMode) {
     document.getElementById("currentGuildName").innerText = "Mensajes Directos";
     document.getElementById("membersTitle").innerText = "Tus Contactos";
 
+    // DISEÑO SOLUCIONADO image_eed643.png: Muestra avatares nativos en la lista de canales directos
     onValue(ref(db, "dmChannels"), snap => {
-      channelContainer.innerHTML = "";
-      const dms = snap.val();
-      if(!dms) { renderMessages(); return; }
-
+      channelContainer.innerHTML = ""; const dms = snap.val(); if(!dms) { renderMessages(); return; }
       Object.values(dms).forEach(dm => {
-        const btn = document.createElement("div");
-        btn.id = `channel-node-${dm.id}`;
-        btn.className = `channel-btn is-dm ${dm.id === currentChannelId ? 'active' : ''}`;
-        btn.innerHTML = `<div class="channel-name-wrapper">${dm.name}</div><div class="channel-badge"></div>`;
+        const btn = document.createElement("div"); btn.id = `channel-node-${dm.id}`;
+        btn.className = `is-dm-btn ${dm.id === currentChannelId ? 'active' : ''} ${unreadChannels[dm.id] ? 'unread' : ''}`;
+        
+        let statusClass = "status-" + (dm.status || "offline");
+        const avHtml = dm.avatar ? `<img src="${dm.avatar}">` : dm.name[0];
+
+        btn.innerHTML = `<div class="avatar-container" style="width:32px; height:32px;"><div class="avatar" style="width:32px; height:32px; font-size:12px;">${avHtml}</div><div class="status-dot ${statusClass}" style="width:8px; height:8px; border:2px solid #2b2d31;"></div></div><div class="channel-name-wrapper" style="font-size:15px; font-weight:bold; color:#f2f3f5;">${dm.name}</div><div class="channel-badge"></div>`;
         btn.onclick = () => {
-          currentChannelId = dm.id;
-          btn.classList.remove('unread');
-          document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          renderMessages();
+          currentChannelId = dm.id; btn.classList.remove('unread');
+          document.querySelectorAll('.is-dm-btn, .channel-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active'); renderMessages();
         };
         channelContainer.appendChild(btn);
       });
@@ -368,45 +253,28 @@ function loadChannelsAndMembers() {
     });
 
     onValue(ref(db, "dmChannels"), snap => {
-      const memberContainer = document.getElementById("members-container");
-      memberContainer.innerHTML = "";
-      const dms = snap.val();
-      if(!dms) return;
-      cacheUsers = dms;
-
+      const memberContainer = document.getElementById("members-container"); memberContainer.innerHTML = "";
+      const dms = snap.val(); if(!dms) return; cacheUsers = dms;
       Object.values(dms).forEach(u => {
-        const card = document.createElement("div");
-        card.className = "member-card";
-        card.onclick = () => openProfile(u.id);
-        card.innerHTML = `
-          <div class="avatar-container"><div class="avatar">${u.avatar ? `<img src="${u.avatar}">` : u.name[0]}</div></div>
-          <div class="user-info"><span class="member-nick">${u.name}</span><span class="member-user">@dm_chat</span></div>`;
+        const card = document.createElement("div"); card.className = "member-card"; card.onclick = () => openProfile(u.id);
+        let statusClass = "status-" + (u.status || "offline");
+        card.innerHTML = `<div class="avatar-container"><div class="avatar">${u.avatar ? `<img src="${u.avatar}">` : u.name[0]}</div><div class="status-dot ${statusClass}"></div></div><div class="user-info"><span class="member-nick">${u.name}</span><span class="member-user">@dm_chat</span></div>`;
         memberContainer.appendChild(card);
       });
     });
-
   } else {
     document.getElementById("membersTitle").innerText = "Miembros";
-    onValue(ref(db, `guilds/${currentGuildId}/name`), snap => {
-      if(snap.val()) document.getElementById("currentGuildName").innerText = snap.val();
-    });
-
+    onValue(ref(db, `guilds/${currentGuildId}/name`), snap => { if(snap.val()) document.getElementById("currentGuildName").innerText = snap.val(); });
     onValue(ref(db, `channels/${currentGuildId}`), snap => {
-      channelContainer.innerHTML = "";
-      const channels = snap.val();
-      if(!channels) { renderMessages(); return; }
-
+      channelContainer.innerHTML = ""; const channels = snap.val(); if(!channels) { renderMessages(); return; }
       Object.values(channels).forEach(ch => {
-        const btn = document.createElement("div");
-        btn.id = `channel-node-${ch.id}`;
+        const btn = document.createElement("div"); btn.id = `channel-node-${ch.id}`;
         btn.className = `channel-btn is-channel ${ch.id === currentChannelId ? 'active' : ''}`;
         btn.innerHTML = `<div class="channel-name-wrapper">${ch.name}</div><div class="channel-badge"></div>`;
         btn.onclick = () => {
-          currentChannelId = ch.id;
-          btn.classList.remove('unread');
-          document.querySelectorAll('.channel-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          renderMessages();
+          currentChannelId = ch.id; btn.classList.remove('unread');
+          document.querySelectorAll('.channel-btn, .is-dm-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active'); renderMessages();
         };
         channelContainer.appendChild(btn);
       });
@@ -414,121 +282,70 @@ function loadChannelsAndMembers() {
     });
 
     onValue(ref(db, `usersStatus/${currentGuildId}`), snap => {
-      const container = document.getElementById("members-container");
-      container.innerHTML = "";
-      const users = snap.val();
-      if(!users) return;
-      cacheUsers = users;
-
+      const container = document.getElementById("members-container"); container.innerHTML = "";
+      const users = snap.val(); if(!users) return; cacheUsers = users;
       Object.values(users).sort((a,b) => (b.status !== "offline") - (a.status !== "offline")).forEach(u => {
-        const card = document.createElement("div");
-        card.className = "member-card";
-        card.onclick = () => openProfile(u.uid);
-        
+        const card = document.createElement("div"); card.className = "member-card"; card.onclick = () => openProfile(u.uid);
         let statusClass = "status-" + (u.status || "offline");
         let activityHtml = u.status !== "offline" && u.activity ? `<span class="member-activity">${u.activity}</span>` : "";
-
-        card.innerHTML = `
-          <div class="avatar-container">
-            <div class="avatar">${u.avatar ? `<img src="${u.avatar}">` : u.nickname[0]}</div>
-            <div class="status-dot ${statusClass}"></div>
-          </div>
-          <div class="user-info">
-            <span class="member-nick">${u.nickname}</span>
-            <span class="member-user">@${u.username}</span>
-            ${activityHtml}
-          </div>`;
+        card.innerHTML = `<div class="avatar-container"><div class="avatar">${u.avatar ? `<img src="${u.avatar}">` : u.nickname[0]}</div><div class="status-dot ${statusClass}"></div></div><div class="user-info"><span class="member-nick">${u.nickname}</span><span class="member-user">@${u.username}</span>${activityHtml}</div>`;
         container.appendChild(card);
       });
     });
   }
 }
 
-// Escucha directa lineal y fluida para evitar duplicados masivos
 onChildAdded(ref(db,"discordMessages"), snap=>{
-  const msg = snap.val();
-  // Evitar inyección duplicada si ya está en memoria
-  if(messages.some(m => m.timestamp === msg.timestamp && m.text === msg.text)) return;
-  
+  const msg = snap.val(); if(messages.some(m => m.timestamp === msg.timestamp && m.text === msg.text)) return;
   messages.push(msg);
-  
   if(msg.channelId !== currentChannelId) {
-    const chNode = document.getElementById(`channel-node-${msg.channelId}`);
-    if(chNode) chNode.classList.add('unread');
-    
+    const chNode = document.getElementById(`channel-node-${msg.channelId}`); if(chNode) chNode.classList.add('unread');
     if(msg.guildId && msg.guildId !== "DM" && msg.guildId !== currentGuildId) {
-      const gNode = document.getElementById(`guild-node-${msg.guildId}`);
-      if(gNode) gNode.classList.add('unread');
-    } else if (msg.guildId === "DM" && !isDMMode) {
-      document.getElementById("dmServerBtn").classList.add('unread');
-    }
+      const gNode = document.getElementById(`guild-node-${msg.guildId}`); if(gNode) gNode.classList.add('unread');
+    } else if (msg.guildId === "DM" && !isDMMode) { document.getElementById("dmServerBtn").classList.add('unread'); }
   }
-
   renderMessages();
   if (!isTabFocused) { unreadCount++; document.title = `(${unreadCount}) 🔴 KoriCord`; playNotificationSound(); }
 });
 
 onChildAdded(ref(db,"webMessages"), snap=>{
-  const data = snap.val();
-  if(messages.some(m => m.timestamp === data.time && m.text === data.text)) return;
-  
-  messages.push({
-    text: data.text,
-    nickname: "Kori",
-    username: "soykori",
-    timestamp: data.time,
-    channelId: data.channelId
-  });
+  const data = snap.val(); if(messages.some(m => m.timestamp === data.time && m.text === data.text)) return;
+  messages.push({ text: data.text, nickname: "Kori", username: "soykori", timestamp: data.time, channelId: data.channelId });
   renderMessages();
 });
 
 window.openProfile = (uid) => {
-  const u = cacheUsers[uid];
-  if(!u) return;
+  const u = cacheUsers[uid]; if(!u) return;
   document.getElementById("modalAvatar").innerHTML = u.avatar ? `<img src="${u.avatar}">` : (u.nickname || u.name)[0];
   document.getElementById("modalNick").innerText = u.nickname || u.name;
   document.getElementById("modalUser").innerText = "@" + (u.username || "privado");
   document.getElementById("modalActivity").innerText = u.activity || "Ninguna";
   document.getElementById("modalJoined").innerText = u.joinedAt ? new Date(u.joinedAt).toLocaleDateString() : "Desconocido";
-  
-  const rolesBox = document.getElementById("modalRoles");
-  rolesBox.innerHTML = "";
-  if(u.roles){
-    u.roles.forEach(r => {
-      const badge = document.createElement("span");
-      badge.className = "role-badge";
-      badge.innerText = r;
-      rolesBox.appendChild(badge);
-    });
-  } else { rolesBox.innerText = "Ninguno"; }
+  const rolesBox = document.getElementById("modalRoles"); rolesBox.innerHTML = "";
+  if(u.roles){ u.roles.forEach(r => { const badge = document.createElement("span"); badge.className = "role-badge"; badge.innerText = r; rolesBox.appendChild(badge); }); } else { rolesBox.innerText = "Ninguno"; }
   document.getElementById("profileModal").style.display = "flex";
 };
 
 window.closeProfile = () => { document.getElementById("profileModal").style.display = "none"; };
 
 onValue(ref(db, "typing/discord"), snap => {
-  const typingBox = document.getElementById("typing");
-  const data = snap.val();
-  if (data && data.username && (Date.now() - data.time < 5000)) {
-    typingBox.innerText = `@${data.username} está escribiendo...`;
-  } else {
-    typingBox.innerText = "";
-  }
+  const typingBox = document.getElementById("typing"); const data = snap.val();
+  if (data && data.username && (Date.now() - data.time < 5000)) { typingBox.innerText = `@${data.username} está escribiendo...`; } else { typingBox.innerText = ""; }
+});
+
+// Emisión recíproca al escribir nosotros (Kori) hacia Firebase
+let typingTimeoutWeb;
+document.getElementById("msg").addEventListener("input", () => {
+  set(ref(db, "typing/web"), { username: "soykori", time: Date.now() });
+  clearTimeout(typingTimeoutWeb);
+  typingTimeoutWeb = setTimeout(() => { set(ref(db, "typing/web"), null); }, 4000);
 });
 
 window.sendMessage = async function(){
-  const text = document.getElementById("msg").value;
-  if(!text.trim() || !currentChannelId) return;
-
-  await push(ref(db,"webMessages"),{
-    text: text,
-    time: Date.now(),
-    channelId: currentChannelId
-  });
+  const text = document.getElementById("msg").value; if(!text.trim() || !currentChannelId) return;
+  set(ref(db, "typing/web"), null);
+  await push(ref(db,"webMessages"),{ text: text, time: Date.now(), channelId: currentChannelId });
   document.getElementById("msg").value="";
 };
-
 document.getElementById("msg").addEventListener("keydown",(e)=>{ if(e.key==="Enter") sendMessage(); });
-</script>
-</body>
-</html>
+</script></body></html>
