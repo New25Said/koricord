@@ -8,18 +8,15 @@
 </head>
 <body>
 
-  <!-- PANTALLA DE LOGIN -->
   <div id="login">
     <h2>¿Eres Kori?</h2>
-    <input id="code" type="password" placeholder="escribe: soykori">
+    <input id="code" type="password" placeholder="wenas kori">
     <button id="loginBtn">Entrar</button>
     <p id="err"></p>
   </div>
 
-  <!-- CONTENEDOR PRINCIPAL DISCORD -->
   <div class="app-container" id="app">
     
-    <!-- COLUMNA 1: BARRA DE SERVIDORES -->
     <div class="guilds-sidebar">
       <div class="guild-icon" id="dmServerBtn" title="Mensajes Directos">
         <svg class="dm-icon-svg" viewBox="0 0 127.14 96.36">
@@ -31,17 +28,15 @@
       <div id="guildsContainer" style="display:contents;"></div>
     </div>
 
-    <!-- COLUMNA 2: CANALES / LISTA DM NATIVA -->
     <div class="channels-sidebar">
       <div class="sidebar-title" id="currentGuildName">Mensajes Directos</div>
       <div class="channel-list-scroller" id="channels-container"></div>
     </div>
 
-    <!-- COLUMNA 3: FLUJO DE CHAT CENTRAL -->
     <div class="chat-area" id="chatArea">
       <div class="dm-placeholder" id="placeholderView">
         <h3>Activo ahora</h3>
-        <p>Por ahora está todo tranquilo... Elige una conversación para empezar.</p>
+        <p>Por ahora está todo tranquilo... Elige una conversación en la barra izquierda para interactuar en tiempo real.</p>
       </div>
       <div id="mainChatContent" style="display:none; flex:1; flex-direction:column;">
         <div id="messages" class="messages"></div>
@@ -52,12 +47,10 @@
       </div>
     </div>
 
-    <!-- COLUMNA 4: BARRA DERECHA DINÁMICA -->
     <div class="member-list" id="sidebarRightColumn"></div>
 
   </div>
 
-  <!-- MODAL DE PERFIL COMPLETO -->
   <div class="modal-overlay" id="profileModal">
     <div class="profile-modal">
       <div class="profile-banner"></div>
@@ -70,7 +63,7 @@
       </div>
       <div class="profile-body">
         <div>
-          <div class="profile-section-title">Estado del Usuario</div>
+          <div class="profile-section-title">Estado en Discord</div>
           <div style="color:#dbdee1; margin-top:4px;" id="modalStatusText">Desconectado</div>
         </div>
         <div>
@@ -82,14 +75,13 @@
           <div style="color:#dbdee1; margin-top:4px;" id="modalJoined">-</div>
         </div>
         <div>
-          <div class="profile-section-title">Roles</div>
+          <div class="profile-section-title">Roles Asignados</div>
           <div class="profile-roles" id="modalRoles">Ninguno</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Motor de la Aplicación -->
   <script type="module" src="app.js"></script>
 </body>
 </html>
