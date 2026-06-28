@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, PresenceUpdateStatus } from "discord.js";
+import { Client, GatewayIntentBits } from "discord.js";
 import express from "express";
 import admin from "firebase-admin";
 
@@ -48,26 +48,50 @@ async function syncServerData() {
   });
 }
 
-// Sincronizar Miembros y sus Estados reales
+// Sincronizar Miembros con Perfil Completo (Banner, Estado, Actividad)
 async function syncMembers() {
   const guild = client.guilds.cache.first();
   if (!guild) return;
 
   try {
     const membersFetch = await guild.members.fetch({ withPresences: true });
-    const membersList = membersFetch.map(m => {
+    
+    const membersList = await Promise.all(membersFetch.map(async (m) => {
+      // Forzar fetch de usuario para obtener el color del banner
+      let userFull = m.user;
+      try {
+        userFull = await client.users.fetch(m.user.id, { force: true });
+      } catch(e) {}
+
       let status = m.presence?.status || "offline";
       if (status === "invisible") status = "offline";
-      
+
+      // Obtener actividades (juegos, Spotify, etc.)
+      let activityText = "";
+      if (m.presence?.activities && m.presence.activities.length > 0) {
+        const currentAct = m.presence.activities.find(a => a.type !== 4); // Ignorar estado personalizado en texto plano aquí
+        if (currentAct) {
+          const typeNames = ["Jugando a", "Transmitiendo", "Escuchando", "Viendo", "Compitiendo en"];
+          activityText = `${typeNames[currentAct.type] || "Jugando a"} ${currentAct.name}`;
+        }
+      }
+
+      // Obtener el estado personalizado en texto
+      const customStatusObj = m.presence?.activities.find(a => a.type === 4);
+      const customStatusText = customStatusObj ? customStatusObj.state || "" : "";
+
       return {
         id: m.user.id,
         username: m.user.username,
         nickname: m.displayName,
         avatar: m.user.displayAvatarURL({ extension: "png", size: 128 }),
+        bannerColor: userFull.hexAccentColor || "#5865f2",
         status: status, // online, idle, dnd, offline
+        customStatus: customStatusText,
+        activity: activityText,
         isBot: m.user.bot
       };
-    });
+    }));
 
     await db.ref("serverMembers").set(membersList);
   } catch (err) {
@@ -90,7 +114,7 @@ client.once("ready", async () => {
   }
 });
 
-// Eventos en tiempo real para cambios de Servidor, Canales o Estados de Miembros
+// Escuchas en tiempo real para actualización al milisegundo
 client.on("guildUpdate", syncServerData);
 client.on("channelCreate", syncServerData);
 client.on("channelDelete", syncServerData);
