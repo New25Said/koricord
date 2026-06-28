@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits, Partials } from "discord.js";
 import express from "express";
 import admin from "firebase-admin";
 
-/* 🔑 FIREBASE */
+/* 🔑 CONFIGURACIÓN DE FIREBASE */
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
@@ -12,13 +12,13 @@ admin.initializeApp({
 
 const db = admin.database();
 
-/* 🌐 WEB SERVER */
+/* 🌐 SERVIDOR WEB EXPRESS */
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.static("public"));
-app.listen(PORT, () => { console.log("🌐 Web activa en Render"); });
+app.listen(PORT, () => { console.log("🌐 KoriCord Web corriendo con éxito"); });
 
-/* 🤖 DISCORD BOT */
+/* 🤖 CONFIGURACIÓN DEL BOT DE DISCORD */
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -33,6 +33,7 @@ const client = new Client({
   partials: [Partials.Channel, Partials.Message]
 });
 
+// Función para capturar el estado detallado/actividad de los usuarios
 function getMemberActivity(member) {
   if (!member.presence || !member.presence.activities.length) return null;
   for (const activity of member.presence.activities) {
@@ -46,7 +47,7 @@ function getMemberActivity(member) {
   return member.presence.activities[0].name ? `✨ ${member.presence.activities[0].name}` : null;
 }
 
-// Sincronización fija (Bug Resuelto: Ya no borra canales ni servidores enteros con .remove())
+// Sincronización fija (Bug corregido: ya no limpia nodos con .remove())
 async function syncDeepDiscordStructure() {
   const guilds = client.guilds.cache.values();
   for (const guild of guilds) {
@@ -79,16 +80,17 @@ async function syncDeepDiscordStructure() {
           roles: roles
         });
       });
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error("Error en sincronización profunda:", e); }
   }
 }
 
 client.once("ready", () => {
-  console.log(`🤖 Logueado como ${client.user.tag}`);
+  console.log(`🤖 Bot conectado como ${client.user.tag}`);
   syncDeepDiscordStructure();
-  setInterval(syncDeepDiscordStructure, 5 * 60 * 1000); 
+  setInterval(syncDeepDiscordStructure, 5 * 60 * 1000); // Resincronización en segundo plano cada 5 min
 });
 
+// Evento para actualizar cambios de estado en tiempo real (Luna, No molestar, juego, etc)
 client.on("presenceUpdate", (oldPresence, newPresence) => {
   if (!newPresence || newPresence.user.bot) return;
   const member = newPresence.member;
@@ -109,7 +111,16 @@ client.on("presenceUpdate", (oldPresence, newPresence) => {
   });
 });
 
-/* 💬 DISCORD → FIREBASE */
+// Capturador del evento "Escribiendo..." de Discord
+client.on("typingStart", (typing) => {
+  if (typing.user.bot) return;
+  db.ref("typing/discord").set({
+    username: typing.user.username,
+    time: Date.now()
+  });
+});
+
+/* 💬 TRANSMISIÓN: DISCORD → FIREBASE */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
@@ -146,18 +157,18 @@ client.on("messageCreate", async (message) => {
   });
 });
 
-/* 🌐 WEB → DISCORD */
+/* 🌐 TRANSMISIÓN: WEB → DISCORD */
 db.ref("webMessages").on("child_added", async (snap) => {
   const data = snap.val();
   if (!data?.text || !data.channelId) return;
-  if (Date.now() - data.time > 5000) return;
+  if (Date.now() - data.time > 5000) return; // Evita duplicar mensajes antiguos al iniciar
 
   try {
     const channel = await client.channels.fetch(data.channelId);
     if (channel && channel.isTextBased()) {
       await channel.send(data.text);
     }
-  } catch (err) { console.error("Error al retransmitir:", err); }
+  } catch (err) { console.error("Error al enviar mensaje a Discord:", err); }
 });
 
 client.login(process.env.DISCORD_TOKEN);
