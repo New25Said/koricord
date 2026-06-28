@@ -5,31 +5,32 @@
 <title>KoriCord</title>
 
 <style>
-/* Paleta de Colores un pelín más oscura estilo AMOLED / Discord Dark */
+/* Diseño AMOLED Black más oscuro y descansado */
 body{margin:0;font-family:Arial, sans-serif;background:#111214;color:white;height:100vh;overflow:hidden;}
 #login{position:fixed;inset:0;background:#1e1f22;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:200;}
-input,button{padding:10px;border-radius:6px;border:none;outline:none;transition: all 0.2s ease;}
-button{background:#5865f2;color:white;cursor:pointer;font-weight:bold;}
+input,button{padding:10px;border-radius:6px;border:none;outline:none;}
+button{background:#5865f2;color:white;cursor:pointer;font-weight:bold;transition: background 0.2s ease, transform 0.2s ease;}
 button:hover{background:#4752c4; transform: scale(1.03);}
 
-/* Estructura de 4 Columnas estilo Discord */
+/* Estructura Completa de 4 Columnas estilo Discord */
 .app-container{display:none;height:100vh;width:100vw;}
 
-/* COLUMNA 1: Lista de Servidores con Animaciones */
+/* COLUMNA 1: Barra de Servidores + Botón DM */
 .guilds-sidebar{width:72px;background:#1e1f22;display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:8px;border-right:1px solid #111214;overflow-y:auto;flex-shrink:0;}
 .guild-icon{width:48px;height:48px;border-radius:50%;background:#313338;color:#dbdee1;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold;cursor:pointer;transition:all 0.25s cubic-bezier(0.4, 0, 0.2, 1);overflow:hidden;position:relative;}
-.guild-icon img{width:100%;height:100%;object-fit:cover;transition: transform 0.25s ease;}
+.guild-icon img{width:100%;height:100%;object-fit:cover;transition: transform 0.2s ease;}
 .guild-icon:hover img{transform: scale(1.1);}
 .guild-icon:hover, .guild-icon.active{border-radius:16px;background:#5865f2;color:white;}
 .guild-separator{width:32px;height:2px;background:#2b2d31;margin:4px 0;border-radius:1px;}
 
+/* Animación del botón DM */
 .dm-icon-svg {width:26px; height:26px; fill:currentColor; transition: transform 0.25s ease;}
 .guild-icon:hover .dm-icon-svg {transform: rotate(8deg) scale(1.1);}
 
-.guild-badge {position:absolute;bottom:0;right:0;width:14px;height:14px;background:#f23f43;border-radius:50%;border:2px solid #1e1f22;display:none;animation: popBadge 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
+.guild-badge {position:absolute;bottom:0;right:0;width:14px;height:14px;background:#f23f43;border-radius:50%;border:2px solid #1e1f22;display:none;animation: popBadge 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
 .guild-icon.unread .guild-badge {display:block;}
 
-/* COLUMNA 2: Lista de Canales */
+/* COLUMNA 2: Lista de Canales / Contactos de MD */
 .channels-sidebar{width:220px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:4px;border-right:1px solid #1c1d1f;overflow-y:auto;flex-shrink:0;}
 .sidebar-title{font-size:12px;font-weight:bold;color:#949ba4;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .channel-btn{display:flex;align-items:center;justify-content:space-between;padding:8px;border-radius:4px;color:#949ba4;cursor:pointer;font-size:14px;font-weight:500;position:relative;transition: all 0.2s ease;}
@@ -43,20 +44,20 @@ button:hover{background:#4752c4; transform: scale(1.03);}
 .channel-badge {width:8px;height:8px;background:#ffffff;border-radius:50%;display:none;animation: popBadge 0.2s ease;}
 .channel-btn.unread .channel-badge {display:block;}
 
-/* COLUMNA 3: Área Central de Chat (Más Oscura) */
+/* COLUMNA 3: Área Central de Chat */
 .chat-area{flex:1;display:flex;flex-direction:column;height:100vh;background:#313338;position:relative;min-width:0;}
 .messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:4px;}
 
-/* COLUMNA 4: Barra Derecha de Miembros */
+/* COLUMNA 4: Lista de Miembros / Contactos */
 .member-list{width:240px;background:#2b2d31;display:flex;flex-direction:column;padding:16px 8px;gap:8px;border-left:1px solid #1c1d1f;overflow-y:auto;flex-shrink:0;}
-.member-title{font-size:12px;font-weight:bold;color:#949ba4;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;padding-left:8px;}
 
-/* Componentes de Usuario y Avatares */
+/* Componentes de Usuario, Avatares y Estados de Discord */
 .avatar-container{position:relative;width:38px;height:38px;flex-shrink:0;}
 .avatar{width:38px;height:38px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;overflow:hidden;font-weight:bold;}
 .avatar img{width:100%;height:100%;object-fit:cover;}
 
-.status-dot{position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;border:3px solid #2b2d31;transition: all 0.2s ease;}
+/* Mapeo estricto de estados visuales de Discord */
+.status-dot{position:absolute;bottom:-2px;right:-2px;width:12px;height:12px;border-radius:50%;border:3px solid #2b2d31;}
 .status-online{background:#23a55a;}
 .status-idle{background:#f0b232; border-radius: 50% 0 50% 50%; transform: rotate(-45deg); width: 10px; height: 10px; bottom: 0px; right: 0px;}
 .status-dnd{background:#f23f43;}
@@ -70,8 +71,8 @@ button:hover{background:#4752c4; transform: scale(1.03);}
 .member-user{font-size:11px;color:#949ba4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .member-activity{font-size:11px;color:#b5bac1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;font-style:italic;}
 
-/* Estilos e Intro Fluida de Mensajes */
-.msg{display:flex;gap:16px;padding:8px;border-radius:4px;animation: fadeInMsg 0.25s ease-out both;}
+/* Flujo de Mensajes con Animación de entrada fluida */
+.msg{display:flex;gap:16px;padding:8px;border-radius:4px;animation: fadeInMsg 0.22s ease-out both;}
 .msg:hover{background:#2e3035;}
 .msg-content{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
 .top{display:flex;align-items:baseline;gap:8px;}
@@ -80,6 +81,7 @@ button:hover{background:#4752c4; transform: scale(1.03);}
 .time{font-size:11px;color:#949ba4;}
 .text{color:#dbdee1;font-size:15px;word-break:break-word;line-height:1.4;}
 
+/* Formato Markdown */
 .text code {background:#1e1f22; padding:2px 4px; border-radius:4px; font-family:monospace; font-size:14px; color:#e0c89a;}
 .media-attachment{margin-top:8px;max-width:400px;max-height:300px;border-radius:8px;overflow:hidden;display:block;}
 .media-attachment img, .media-attachment video{max-width:100%;max-height:300px;border-radius:8px;transition: transform 0.2s ease;}
@@ -90,8 +92,8 @@ button:hover{background:#4752c4; transform: scale(1.03);}
 .input-box input{width:100%;background:#383a40;color:#dbdee1;padding:12px;box-sizing:border-box;font-size:15px;border-radius:8px;border:none;}
 .typing-indicator{position:absolute;top:-18px;left:20px;font-size:12px;color:#abcdef;height:14px;}
 
-/* Modal de Perfil Detallado Animado */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:250;align-items:center;justify-content:center;backdrop-filter: blur(2px);transition: all 0.3s ease;}
+/* Modal de Perfil Avanzado */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:250;align-items:center;justify-content:center;backdrop-filter: blur(2px);}
 .profile-modal{width:300px;background:#18191c;border-radius:8px;overflow:hidden;box-shadow:0 12px 24px rgba(0,0,0,0.6);animation: scaleUpModal 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) both;}
 .profile-banner{height:60px;background:#5865f2;}
 .profile-header{padding:0 16px 16px 16px;position:relative;border-bottom:1px solid #232428;}
@@ -106,7 +108,6 @@ button:hover{background:#4752c4; transform: scale(1.03);}
 .profile-roles{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
 .role-badge{background:#2b2d31;color:#dbdee1;padding:4px 8px;border-radius:4px;font-size:12px;border:1px solid #35373c;}
 
-/* Keyframes de Animaciones */
 @keyframes fadeInMsg {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
@@ -132,7 +133,7 @@ button:hover{background:#4752c4; transform: scale(1.03);}
 </div>
 
 <div class="app-container" id="app">
-  <!-- COLUMNA 1: SELECTOR DE SERVIDORES Y BOTÓN DM -->
+  <!-- COLUMNA 1: BOTÓN DM Y SERVIDORES -->
   <div class="guilds-sidebar">
     <div class="guild-icon active" id="dmServerBtn" title="Mensajes Directos" onclick="selectDMMode()">
       <svg class="dm-icon-svg" viewBox="0 0 127.14 96.36">
@@ -144,13 +145,13 @@ button:hover{background:#4752c4; transform: scale(1.03);}
     <div id="guildsContainer" style="display:contents;"></div>
   </div>
 
-  <!-- COLUMNA 2: SELECTOR DE CANALES / CONVERSACIONES DM -->
+  <!-- COLUMNA 2: SECCIÓN DE CANALES / CONVERSACIONES DM -->
   <div class="channels-sidebar">
     <div class="sidebar-title" id="currentGuildName">Mensajes Directos</div>
     <div id="channels-container"></div>
   </div>
 
-  <!-- COLUMNA 3: FLUJO DE CHAT -->
+  <!-- COLUMNA 3: CHAT CENTRAL -->
   <div class="chat-area">
     <div id="messages" class="messages"></div>
     <div class="input-box">
@@ -159,14 +160,14 @@ button:hover{background:#4752c4; transform: scale(1.03);}
     </div>
   </div>
   
-  <!-- COLUMNA 4: LISTA DE MIEMBROS -->
+  <!-- COLUMNA 4: MIEMBROS / CONTACTOS -->
   <div class="member-list">
     <div class="member-title" id="membersTitle">Tus Contactos</div>
     <div id="members-container"></div>
   </div>
 </div>
 
-<!-- MODAL DE PERFIL DETALLADO -->
+<!-- PERFIL DETALLADO MODAL -->
 <div class="modal-overlay" id="profileModal" onclick="closeProfile()">
   <div class="profile-modal" onclick="event.stopPropagation()">
     <div class="profile-banner"></div>
@@ -240,6 +241,21 @@ function parseMarkdown(text) {
   return html;
 }
 
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(580, ctx.currentTime);
+    osc.frequency.setValueAtTime(900, ctx.currentTime + 0.07);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + 0.25);
+  } catch(e){}
+}
+
 window.check = () => {
   const val = document.getElementById("code").value;
   if(val === "soykori"){
@@ -290,10 +306,8 @@ window.selectDMMode = () => {
   isDMMode = true;
   currentGuildId = "DM";
   currentChannelId = "";
-  
   document.querySelectorAll('.guild-icon').forEach(i => i.classList.remove('active'));
   document.getElementById("dmServerBtn").classList.add('active');
-  
   loadChannelsAndMembers();
 };
 
@@ -327,7 +341,6 @@ onValue(ref(db, "guilds"), snap => {
     };
     container.appendChild(iconBtn);
   });
-  
   loadChannelsAndMembers();
 });
 
@@ -475,8 +488,8 @@ onChildAdded(ref(db,"discordMessages"), snap=>{
       document.getElementById("dmServerBtn").classList.add('unread');
     }
   }
-
   renderMessages();
+  if (!isTabFocused) { unreadCount++; document.title = `(${unreadCount}) 🔴 KoriCord`; playNotificationSound(); }
 });
 
 onChildAdded(ref(db,"webMessages"), snap=>{
@@ -511,11 +524,21 @@ window.openProfile = (uid) => {
     });
   } else { rolesBox.innerText = "Ninguno"; }
   
-  const modal = document.getElementById("profileModal");
-  modal.style.display = "flex";
+  document.getElementById("profileModal").style.display = "flex";
 };
 
 window.closeProfile = () => { document.getElementById("profileModal").style.display = "none"; };
+
+// Indicador "escribiendo..." de Discord en tiempo real
+onValue(ref(db, "typing/discord"), snap => {
+  const typingBox = document.getElementById("typing");
+  const data = snap.val();
+  if (data && data.username && (Date.now() - data.time < 6000)) {
+    typingBox.innerText = `@${data.username} está escribiendo...`;
+  } else {
+    typingBox.innerText = "";
+  }
+});
 
 window.sendMessage = async function(){
   const text = document.getElementById("msg").value;
