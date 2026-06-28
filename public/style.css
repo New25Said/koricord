@@ -98,7 +98,6 @@ body {
 .channel-btn.active { background: rgba(255,255,255,0.1); color: var(--text-main); font-weight: 500; }
 .channel-btn::before { content: "#"; font-size: 18px; color: var(--text-muted); opacity: 0.6; }
 
-/* PUNTITO ROJO DE NUEVO MENSAJE EN CANAL */
 .unread-badge {
   position: absolute; right: 10px; width: 8px; height: 8px;
   background-color: #f23f43; border-radius: 50%; display: none;
@@ -106,7 +105,7 @@ body {
 }
 
 /* CHAT AREA */
-.chat { flex: 1; background: var(--bg-chat); display: flex; flex-direction: column; }
+.chat { flex: 1; background: var(--bg-chat); display: flex; flex-direction: column; position: relative; }
 .chat-header {
   height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px;
   border-bottom: 1px solid rgba(0,0,0,0.2); font-weight: bold; flex-shrink: 0;
@@ -115,9 +114,9 @@ body {
 .chat-header .hashtag { color: var(--text-muted); font-size: 20px; }
 .toggle-members-btn {
   background: transparent; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px;
-  border-radius: 4px; font-size: 13px; font-weight: 500; transition: 0.2s; color: var(--text-main);
+  border-radius: 4px; font-size: 13px; font-weight: 500; transition: 0.2s; color: var(--text-main); cursor: pointer;
 }
-.toggle-members-btn:hover { background: rgba(255,255,255,0.1); border-color: transparent; }
+.toggle-members-btn:hover { background: rgba(255,255,255,0.1); }
 
 .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
 .msg { display: flex; gap: 16px; padding: 4px 8px; border-radius: 4px; transition: background 0.1s; position: relative; }
@@ -130,16 +129,34 @@ body {
 .time { font-size: 11px; color: var(--text-muted); }
 .text { color: #dbdee1; margin-top: 4px; font-size: 15px; line-height: 1.375; white-space: pre-wrap; word-break: break-word; }
 
-/* 🔴 RAYA ROJA DE MENSAJE NUEVO NO LEÍDO */
+/* 🔴 SEPARADOR ROJO DE MENSAJE NUEVO CORREGIDO */
 .unread-divider {
-  display: flex; align-items: center; margin: 8px 0; position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 12px 0;
+  position: relative;
+  height: 20px;
+  width: 100%;
 }
 .unread-divider::before {
-  content: ""; flex: 1; height: 1px; background-color: #f23f43;
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 1px;
+  background-color: #f23f43;
+  z-index: 1;
 }
 .unread-divider span {
-  background-color: #f23f43; color: white; padding: 2px 8px;
-  border-radius: 4px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;
+  background-color: #f23f43;
+  color: white;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  z-index: 2;
+  position: relative;
 }
 
 /* MIEMBROS (DERECHA) */
@@ -152,27 +169,77 @@ body {
 .members-list { flex: 1; padding: 0 8px; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
 
 .member-item {
-  display: flex; align-items: center; gap: 12px; padding: 6px 8px; border-radius: 4px; cursor: pointer; transition: 0.2s;
+  display: flex; align-items: center; gap: 12px; padding: 6px 8px; border-radius: 4px; cursor: pointer; transition: 0.2s; position: relative;
 }
 .member-item:hover { background: rgba(255,255,255,0.05); }
 .member-avatar-container { position: relative; width: 32px; height: 32px; }
 .member-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
 
-/* 🟢 INDICADOR DE ESTADOS DISCORD */
+/* 🟢 ICONOS REALES DE ESTADO DE DISCORD */
 .status-dot {
   position: absolute; bottom: -2px; right: -2px; width: 10px; height: 10px;
-  border-radius: 50%; border: 2px solid var(--bg-members);
+  border-radius: 50%; border: 2px solid var(--bg-sidebar);
 }
 .status-dot.online { background-color: var(--online); }
-.status-dot.idle { background-color: var(--idle); }
-.status-dot.dnd { background-color: var(--dnd); }
-.status-dot.offline { background-color: var(--offline); }
+.status-dot.idle { background-color: var(--idle); border-radius: 50% 50% 0 50%; transform: rotate(-45deg); width: 8px; height: 8px; } /* Media luna estilo Discord */
+.status-dot.dnd { background-color: var(--dnd); position: relative; }
+.status-dot.dnd::after { content: ""; position: absolute; left: 2px; top: 4px; width: 6px; height: 2px; background: var(--bg-sidebar); } /* Línea central No Molestar */
+.status-dot.offline { background-color: transparent; border: 2px solid var(--offline); width: 8px; height: 8px; }
 
 .member-info { display: flex; flex-direction: column; overflow: hidden; }
 .member-name { font-size: 14px; font-weight: 500; color: #dbdee1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .member-sub { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* INDICADORES ADICIONALES */
+/* 🎴 POPOUT / PERFIL FLOTANTE AL PASAR CURSOR (ESTILO DISCORD) */
+.profile-popout {
+  position: absolute;
+  right: 250px;
+  width: 250px;
+  background: #111214;
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.6);
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.popout-banner {
+  height: 60px;
+  width: 100%;
+}
+.popout-avatar-wrap {
+  position: relative;
+  margin-top: -30px;
+  margin-left: 12px;
+  width: 64px;
+  height: 64px;
+}
+.popout-avatar {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  border: 4px solid #111214;
+  background: var(--accent);
+  object-fit: cover;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: bold;
+}
+.popout-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.popout-names {
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding-bottom: 8px;
+}
+.popout-nick { font-size: 16px; font-weight: bold; color: white; }
+.popout-user { font-size: 13px; color: var(--text-muted); }
+.popout-section-title { font-size: 10px; font-weight: bold; color: var(--text-main); letter-spacing: 0.5px; margin-bottom: 2px; }
+.popout-text { font-size: 13px; color: #dbdee1; word-break: break-word; }
+
+/* ELEMENTOS GENERALES */
 .typing-indicator { padding: 0 16px; font-size: 12px; color: var(--text-muted); height: 20px; }
 .input { padding: 0 16px 24px 16px; display: flex; gap: 10px; background: transparent; }
 input { flex: 1; padding: 12px; border: none; border-radius: 8px; background: #383a40; color: white; font-size: 15px; }
