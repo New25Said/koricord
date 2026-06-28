@@ -16,9 +16,9 @@ const db = admin.database();
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.static("public"));
-app.listen(PORT, () => { console.log("🌐 KoriCord Web corriendo con éxito"); });
+app.listen(PORT, () => { console.log("🌐 KoriCord Web corriendo a la velocidad de la luz"); });
 
-/* 🤖 CONFIGURACIÓN DEL BOT DE DISCORD */
+/* 🤖 CONFIGURACIÓN DEL BOT DE DISCORD (CON TODOS LOS INTENTS REACTIVOS) */
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -33,13 +33,13 @@ const client = new Client({
   partials: [Partials.Channel, Partials.Message]
 });
 
-// Función para capturar el estado detallado/actividad de los usuarios
+// Función optimizada para extraer la actividad exacta en tiempo real
 function getMemberActivity(member) {
   if (!member.presence || !member.presence.activities.length) return null;
   for (const activity of member.presence.activities) {
     if (activity.name === "Custom Status") {
       if(!activity.state) return null;
-      return `✨ ${activity.state.replace(/<a?:.+?:\d+>/g, '✨')}`;
+      return `✨ ${activity.state.replace(/<a?:.+?:\d+>/g, '✨')}`; // Limpia emojis personalizados rotos
     }
     if (activity.type === 2) return `🎧 Escuchando ${activity.name}`;
     if (activity.type === 0) return `🎮 Jugando a ${activity.name}`;
@@ -47,14 +47,17 @@ function getMemberActivity(member) {
   return member.presence.activities[0].name ? `✨ ${member.presence.activities[0].name}` : null;
 }
 
-// Sincronización fija (Bug corregido: ya no limpia nodos con .remove())
-async function syncDeepDiscordStructure() {
+// Sincronización estructural rápida al encender (No borra mensajes ni historiales)
+async function syncDiscordStructure() {
+  console.log("⚡ Sincronizando servidores, canales y estados iniciales...");
   const guilds = client.guilds.cache.values();
+  
   for (const guild of guilds) {
     try {
       const iconUrl = guild.iconURL({ extension: 'png', size: 128 }) || null;
       await db.ref(`guilds/${guild.id}`).update({ id: guild.id, name: guild.name, iconUrl: iconUrl });
 
+      // Cargar canales de texto
       const channels = await guild.channels.fetch();
       channels.forEach(ch => {
         if (ch.isTextBased()) {
@@ -62,6 +65,7 @@ async function syncDeepDiscordStructure() {
         }
       });
 
+      // Cargar miembros y presencias iniciales de forma directa
       const members = await guild.members.fetch({ withPresences: true });
       members.forEach(member => {
         if (member.user.bot) return;
@@ -69,7 +73,7 @@ async function syncDeepDiscordStructure() {
         const activityText = getMemberActivity(member);
         const roles = member.roles.cache.filter(r => r.name !== "@everyone").map(r => r.name);
 
-        db.ref(`usersStatus/${guild.id}/${member.user.id}`).set({
+        db.ref(`usersStatus/${guild.id}/${member.user.id}`).update({
           uid: member.user.id,
           nickname: member.displayName,
           username: member.user.username,
@@ -80,17 +84,17 @@ async function syncDeepDiscordStructure() {
           roles: roles
         });
       });
-    } catch (e) { console.error("Error en sincronización profunda:", e); }
+    } catch (e) { console.error("Error en sincronización inicial:", e); }
   }
+  console.log("✅ Sincronización inicial completada con éxito.");
 }
 
 client.once("ready", () => {
-  console.log(`🤖 Bot conectado como ${client.user.tag}`);
-  syncDeepDiscordStructure();
-  setInterval(syncDeepDiscordStructure, 5 * 60 * 1000); // Resincronización en segundo plano cada 5 min
+  console.log(`🤖 KoriCord-Bot en línea como ${client.user.tag}`);
+  syncDiscordStructure();
 });
 
-// Evento para actualizar cambios de estado en tiempo real (Luna, No molestar, juego, etc)
+/* 📡 EVENTO PRESENCE UPDATE: Cambios de estado instantáneos (A la velocidad de la luz) */
 client.on("presenceUpdate", (oldPresence, newPresence) => {
   if (!newPresence || newPresence.user.bot) return;
   const member = newPresence.member;
@@ -101,6 +105,7 @@ client.on("presenceUpdate", (oldPresence, newPresence) => {
   const activityText = getMemberActivity(member);
   const roles = member.roles.cache.filter(r => r.name !== "@everyone").map(r => r.name);
 
+  // Actualización atómica del usuario que cambió su estado, sin tocar nada más
   db.ref(`usersStatus/${guildId}/${newPresence.user.id}`).update({
     nickname: member.displayName,
     username: newPresence.user.username,
@@ -111,7 +116,7 @@ client.on("presenceUpdate", (oldPresence, newPresence) => {
   });
 });
 
-// Capturador del evento "Escribiendo..." de Discord
+/* ⌨️ INDICADOR ESCRIBIENDO: Discord -> Web en milisegundos */
 client.on("typingStart", (typing) => {
   if (typing.user.bot) return;
   db.ref("typing/discord").set({
@@ -120,7 +125,7 @@ client.on("typingStart", (typing) => {
   });
 });
 
-/* 💬 TRANSMISIÓN: DISCORD → FIREBASE */
+/* 💬 TRANSMISIÓN DIRECTA: DISCORD → FIREBASE */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
@@ -137,6 +142,7 @@ client.on("messageCreate", async (message) => {
   const isDM = !message.guild; 
   const guildId = isDM ? "DM" : message.guild.id;
 
+  // Si es un mensaje directo (DM), guardamos/actualizamos dinámicamente el contacto en la lista
   if(isDM) {
     await db.ref(`dmChannels/${message.channel.id}`).update({
       id: message.channel.id,
@@ -145,6 +151,7 @@ client.on("messageCreate", async (message) => {
     });
   }
 
+  // Empujar el mensaje con una marca de tiempo única e inequívoca
   await db.ref("discordMessages").push({
     nickname: isDM ? (message.author.globalName || message.author.username) : (message.member?.displayName || message.author.username),
     username: message.author.username,
@@ -157,18 +164,20 @@ client.on("messageCreate", async (message) => {
   });
 });
 
-/* 🌐 TRANSMISIÓN: WEB → DISCORD */
+/* 🌐 TRANSMISIÓN DIRECTA: WEB → DISCORD */
 db.ref("webMessages").on("child_added", async (snap) => {
   const data = snap.val();
   if (!data?.text || !data.channelId) return;
-  if (Date.now() - data.time > 5000) return; // Evita duplicar mensajes antiguos al iniciar
+  
+  // Evita re-enviar mensajes antiguos que queden en la caché al encender el bot
+  if (Date.now() - data.time > 4000) return; 
 
   try {
     const channel = await client.channels.fetch(data.channelId);
     if (channel && channel.isTextBased()) {
       await channel.send(data.text);
     }
-  } catch (err) { console.error("Error al enviar mensaje a Discord:", err); }
+  } catch (err) { console.error("Error al enviar mensaje a Discord nativo:", err); }
 });
 
 client.login(process.env.DISCORD_TOKEN);
