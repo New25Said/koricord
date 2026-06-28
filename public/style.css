@@ -1,0 +1,742 @@
+/* -------------------------------------------------------------
+   Koricord Premium Theme - Estilo Discord Dark Puro
+------------------------------------------------------------- */
+
+*, *::before, *::after { 
+  box-sizing: border-box; 
+}
+
+body { 
+  margin: 0; 
+  padding: 0;
+  font-family: 'gg sans', 'Helvetica Neue', Arial, sans-serif; 
+  background: #111214; 
+  color: #dbdee1; 
+  height: 100vh; 
+  overflow: hidden; 
+  -webkit-font-smoothing: antialiased;
+}
+
+/* -------------------------------------------------------------
+   Pantalla de Login Segura
+------------------------------------------------------------- */
+#login { 
+  position: fixed; 
+  inset: 0; 
+  background: #1e1f22; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  flex-direction: column; 
+  gap: 16px; 
+  z-index: 999; 
+}
+
+#login h2 { 
+  color: #f2f3f5; 
+  font-size: 24px; 
+  margin: 0 0 8px 0; 
+  font-weight: 600;
+}
+
+#login input { 
+  background: #111214; 
+  color: #dbdee1; 
+  border: 1px solid #232428; 
+  padding: 12px 16px;
+  border-radius: 4px;
+  width: 260px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#login input:focus {
+  border-color: #5865f2;
+}
+
+#login button { 
+  background: #5865f2; 
+  color: #ffffff; 
+  padding: 12px 24px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer; 
+  width: 260px;
+  transition: background-color 0.15s; 
+}
+
+#login button:hover { 
+  background: #4752c4; 
+}
+
+#err { 
+  color: #f23f43; 
+  font-size: 13px; 
+  margin: 0;
+  font-weight: 500;
+}
+
+/* -------------------------------------------------------------
+   Contenedor de Aplicación Principal
+------------------------------------------------------------- */
+.app-container { 
+  display: none; 
+  height: 100vh; 
+  width: 100vw; 
+  overflow: hidden;
+}
+
+/* -------------------------------------------------------------
+   Columna 1: Barra de Servidores (Extrema Izquierda)
+------------------------------------------------------------- */
+.guilds-sidebar { 
+  width: 72px; 
+  background: #1e1f22; 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  padding: 12px 0; 
+  gap: 8px; 
+  flex-shrink: 0; 
+  user-select: none; 
+}
+
+.guild-icon { 
+  position: relative;
+  width: 48px; 
+  height: 48px; 
+  border-radius: 50%; 
+  background: #2b2d31; 
+  color: #dbdee1; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  font-size: 16px; 
+  font-weight: 600; 
+  cursor: pointer; 
+  transition: background-color 0.15s, border-radius 0.15s, color 0.15s; 
+}
+
+.guild-icon img { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+  border-radius: 50%; 
+  transition: border-radius 0.15s;
+}
+
+.guild-icon:hover, 
+.guild-icon.active { 
+  border-radius: 16px; 
+  background: #5865f2; 
+  color: #ffffff; 
+}
+
+.guild-icon:hover img, 
+.guild-icon.active img { 
+  border-radius: 16px; 
+}
+
+.guild-separator { 
+  width: 32px; 
+  height: 2px; 
+  background: #35373c; 
+  margin: 4px 0; 
+  border-radius: 1px; 
+}
+
+.dm-icon-svg { 
+  width: 28px; 
+  height: 28px; 
+  fill: currentColor; 
+}
+
+/* Notificaciones en Servidores */
+.guild-badge { 
+  position: absolute; 
+  bottom: -2px; 
+  right: -2px; 
+  width: 16px; 
+  height: 16px; 
+  background: #f23f43; 
+  border-radius: 50%; 
+  border: 3px solid #1e1f22; 
+  display: none; 
+}
+
+.guild-icon.unread .guild-badge { 
+  display: block; 
+}
+
+/* -------------------------------------------------------------
+   Columna 2: Sub-Barra Lateral (Canales o Amigos DM)
+------------------------------------------------------------- */
+.channels-sidebar { 
+  width: 240px; 
+  background: #2b2d31; 
+  display: flex; 
+  flex-direction: column; 
+  flex-shrink: 0; 
+  user-select: none;
+}
+
+.sidebar-title { 
+  height: 48px;
+  font-size: 12px; 
+  font-weight: 700; 
+  color: #949ba4; 
+  text-transform: uppercase; 
+  letter-spacing: 0.25px; 
+  padding: 0 16px; 
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  white-space: nowrap; 
+}
+
+.channel-list-scroller { 
+  flex: 1; 
+  overflow-y: auto; 
+  padding: 8px 8px 0 8px;
+  display: flex; 
+  flex-direction: column; 
+  gap: 2px; 
+}
+
+/* Botones de Canal y Conversación Directa */
+.channel-btn { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  padding: 8px; 
+  border-radius: 4px; 
+  color: #949ba4; 
+  cursor: pointer; 
+  font-size: 14px; 
+  font-weight: 500; 
+  transition: background-color 0.1s, color 0.1s; 
+}
+
+.channel-btn:hover { 
+  background: #35373c; 
+  color: #dbdee1; 
+}
+
+.channel-btn.active { 
+  background: #404249; 
+  color: #ffffff; 
+}
+
+.channel-btn.is-channel::before { 
+  content: "#"; 
+  font-size: 18px; 
+  color: #80848e; 
+  font-weight: 400;
+}
+
+.channel-badge { 
+  width: 8px; 
+  height: 8px; 
+  background: #ffffff; 
+  border-radius: 50%; 
+  margin-left: auto; 
+  display: none; 
+}
+
+.channel-btn.unread { 
+  color: #f2f3f5; 
+  font-weight: 600; 
+}
+
+.channel-btn.unread .channel-badge { 
+  display: block; 
+}
+
+/* -------------------------------------------------------------
+   Columna 3: Área del Chat Central
+------------------------------------------------------------- */
+.chat-area { 
+  flex: 1; 
+  display: flex; 
+  flex-direction: column; 
+  background: #313338; 
+  min-width: 0; 
+  position: relative; 
+}
+
+/* Vista por defecto cuando está todo vacío */
+.dm-placeholder { 
+  flex: 1; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  flex-direction: column; 
+  color: #949ba4; 
+  text-align: center; 
+  background: #313338; 
+  padding: 20px;
+}
+
+.dm-placeholder h3 { 
+  color: #f2f3f5; 
+  font-size: 20px; 
+  margin: 0 0 8px 0; 
+  font-weight: 600;
+}
+
+.dm-placeholder p { 
+  font-size: 14px; 
+  margin: 0; 
+  max-width: 380px;
+  line-height: 1.4;
+}
+
+/* Área de flujo de mensajes */
+.messages { 
+  flex: 1; 
+  overflow-y: auto; 
+  padding: 16px 16px 8px 16px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 18px; 
+}
+
+.msg { 
+  display: flex; 
+  gap: 16px; 
+  align-items: flex-start; 
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.avatar-container { 
+  position: relative; 
+  width: 40px; 
+  height: 40px; 
+  flex-shrink: 0; 
+  user-select: none;
+}
+
+.avatar { 
+  width: 100%; 
+  height: 100%; 
+  border-radius: 50%; 
+  background: #5865f2; 
+  color: #ffffff; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  font-weight: 600; 
+  font-size: 15px; 
+  overflow: hidden; 
+}
+
+.avatar img { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+}
+
+.msg-content { 
+  display: flex; 
+  flex-direction: column; 
+  min-width: 0; 
+  flex: 1; 
+}
+
+.top { 
+  display: flex; 
+  align-items: baseline; 
+  gap: 8px; 
+}
+
+.name { 
+  font-weight: 500; 
+  color: #f2f3f5; 
+  font-size: 15px; 
+  cursor: pointer; 
+}
+
+.name:hover { 
+  text-decoration: underline; 
+}
+
+.time { 
+  font-size: 11px; 
+  color: #949ba4; 
+  user-select: none;
+}
+
+.text { 
+  color: #dbdee1; 
+  font-size: 15px; 
+  word-break: break-word; 
+  line-height: 1.375; 
+  margin-top: 2px; 
+}
+
+/* Markdown inline codes */
+.text code { 
+  background: #1e1f22; 
+  padding: 2px 4px; 
+  border-radius: 4px; 
+  font-family: Consolas, Monaco, monospace; 
+  font-size: 13px; 
+  color: #e0c89a; 
+}
+
+/* Adjuntos multimedia */
+.media-attachment { 
+  margin-top: 6px; 
+  max-width: 100%; 
+}
+
+.media-attachment img, 
+.media-attachment video { 
+  max-width: 450px; 
+  max-height: 350px; 
+  border-radius: 4px; 
+  object-fit: contain; 
+}
+
+/* Barra inferior para Escribir */
+.input-box { 
+  padding: 0 16px 24px 16px; 
+  background: #313338; 
+  position: relative; 
+}
+
+.input-box input { 
+  width: 100%; 
+  background: #383a40; 
+  color: #dbdee1; 
+  padding: 11px 16px; 
+  font-size: 15px; 
+  border-radius: 8px; 
+  border: none; 
+  outline: none;
+}
+
+.input-box input::placeholder {
+  color: #80848e;
+}
+
+.typing-indicator { 
+  position: absolute; 
+  top: -18px; 
+  left: 24px; 
+  font-size: 12px; 
+  color: #b5bac1; 
+  height: 14px; 
+  font-weight: 500;
+}
+
+/* Lunas de Estado Nativo en los Avatares */
+.status-dot { 
+  position: absolute; 
+  bottom: -2px; 
+  right: -2px; 
+  width: 14px; 
+  height: 14px; 
+  border-radius: 50%; 
+  border: 3px solid #2b2d31; 
+}
+
+.status-online { background: #23a55a; }
+.status-idle { background: #f0b232; }
+.status-dnd { background: #f23f43; }
+.status-offline { background: #80848e; }
+
+/* -------------------------------------------------------------
+   Columna 4: Barra Derecha (Miembros del Servidor o Perfil DM)
+------------------------------------------------------------- */
+.member-list { 
+  width: 240px; 
+  background: #2b2d31; 
+  display: flex; 
+  flex-direction: column; 
+  border-left: 1px solid rgba(0, 0, 0, 0.2); 
+  flex-shrink: 0; 
+  overflow-y: auto; 
+}
+
+.member-title { 
+  font-size: 12px; 
+  font-weight: 700; 
+  color: #949ba4; 
+  text-transform: uppercase; 
+  letter-spacing: 0.25px; 
+  padding: 24px 16px 8px 16px; 
+  user-select: none;
+}
+
+.member-card { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  padding: 6px 8px; 
+  border-radius: 4px; 
+  cursor: pointer; 
+  margin: 1px 8px; 
+  transition: background-color 0.1s; 
+}
+
+.member-card:hover { 
+  background: #35373c; 
+}
+
+.user-info-sidebar { 
+  display: flex; 
+  flex-direction: column; 
+  min-width: 0; 
+}
+
+.member-nick { 
+  font-weight: 500; 
+  font-size: 14px; 
+  color: #949ba4; 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+}
+
+.member-card:hover .member-nick { 
+  color: #f2f3f5; 
+}
+
+.member-activity { 
+  font-size: 12px; 
+  color: #b5bac1; 
+  white-space: nowrap; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  margin-top: 1px;
+}
+
+/* Tarjeta Lateral de Información del Perfil en MD */
+.sidebar-dm-profile { 
+  display: flex; 
+  flex-direction: column; 
+  background: #18191c; 
+  height: 100%; 
+}
+
+.side-banner { 
+  height: 60px; 
+  background: #5865f2; 
+  position: relative; 
+  flex-shrink: 0; 
+}
+
+.side-avatar-wrapper { 
+  position: absolute; 
+  bottom: -28px; 
+  left: 12px; 
+}
+
+.side-avatar { 
+  width: 64px; 
+  height: 64px; 
+  border-radius: 50%; 
+  border: 6px solid #18191c; 
+  background: #2b2d31; 
+  overflow: hidden; 
+}
+
+.side-avatar img { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+}
+
+.side-profile-header { 
+  padding: 36px 16px 12px 16px; 
+  border-bottom: 1px solid #232428; 
+}
+
+.side-nick { 
+  font-size: 16px; 
+  font-weight: 700; 
+  color: #ffffff; 
+  display: flex; 
+  align-items: center; 
+  gap: 6px; 
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.side-app-badge { 
+  background: #5865f2; 
+  color: #ffffff; 
+  font-size: 10px; 
+  padding: 1px 4px; 
+  border-radius: 3px; 
+  font-weight: 700; 
+  flex-shrink: 0;
+}
+
+.side-user { 
+  font-size: 13px; 
+  color: #b5bac1; 
+  margin-top: 2px; 
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.side-body { 
+  padding: 12px 16px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 14px; 
+}
+
+.side-sub-title { 
+  font-size: 11px; 
+  font-weight: 700; 
+  color: #949ba4; 
+  text-transform: uppercase; 
+  letter-spacing: 0.25px; 
+  margin-bottom: 6px; 
+  user-select: none;
+}
+
+.side-box { 
+  background: #232428; 
+  padding: 10px; 
+  border-radius: 4px; 
+  color: #dbdee1; 
+  font-size: 13px; 
+  line-height: 1.4; 
+  word-break: break-word; 
+}
+
+/* -------------------------------------------------------------
+   Modal de Perfil Expandido (Al hacer Clic)
+------------------------------------------------------------- */
+.modal-overlay { 
+  display: none; 
+  position: fixed; 
+  inset: 0; 
+  background: rgba(0, 0, 0, 0.85); 
+  z-index: 9999; 
+  align-items: center; 
+  justify-content: center; 
+}
+
+.profile-modal { 
+  width: 320px; 
+  background: #18191c; 
+  border-radius: 8px; 
+  overflow: hidden; 
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); 
+  animation: fadeInModal 0.15s ease-out;
+}
+
+@keyframes fadeInModal {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.profile-banner { 
+  height: 64px; 
+  background: #5865f2; 
+}
+
+.profile-header { 
+  padding: 0 16px 16px 16px; 
+  position: relative; 
+  border-bottom: 1px solid #232428; 
+}
+
+.profile-modal-avatar { 
+  width: 76px; 
+  height: 76px; 
+  border-radius: 50%; 
+  border: 6px solid #18191c; 
+  background: #2b2d31; 
+  overflow: hidden; 
+  position: absolute; 
+  top: -38px; 
+  left: 16px; 
+}
+
+.profile-modal-avatar img { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+}
+
+.profile-names { 
+  margin-top: 46px; 
+}
+
+.profile-nick { 
+  font-size: 18px; 
+  font-weight: 700; 
+  color: #ffffff; 
+}
+
+.profile-user { 
+  font-size: 13px; 
+  color: #b5bac1; 
+  margin-top: 1px; 
+}
+
+.profile-body { 
+  padding: 16px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 14px; 
+  font-size: 13px; 
+}
+
+.profile-section-title { 
+  font-size: 11px; 
+  font-weight: 700; 
+  color: #949ba4; 
+  text-transform: uppercase; 
+  margin-bottom: 4px;
+}
+
+.profile-roles { 
+  display: flex; 
+  flex-wrap: wrap; 
+  gap: 4px; 
+  margin-top: 4px; 
+}
+
+.role-badge { 
+  background: #2b2d31; 
+  color: #dbdee1; 
+  padding: 4px 8px; 
+  border-radius: 4px; 
+  font-size: 12px; 
+  border: 1px solid #35373c; 
+  font-weight: 500;
+}
+
+/* Barra de desplazamiento (Scrollbars) Estilo Discord */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #2b2d31;
+}
+.messages::-webkit-scrollbar-track {
+  background: #313338;
+}
+::-webkit-scrollbar-thumb {
+  background: #1a1b1e;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #111213;
+}
