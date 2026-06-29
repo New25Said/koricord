@@ -40,13 +40,11 @@ body {
   -webkit-user-select: none;
 }
 
-/* Scrollbars Minimalistas estilo Discord Desktop */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #242528; }
 
-/* 🔐 LOGIN ANIMADO */
 .login-screen {
   position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
   background: radial-gradient(circle at center, #1e1f22 0%, #050506 100%);
@@ -74,7 +72,6 @@ body {
 .login-box button:hover { background: #4752c4; transform: translateY(-1px); }
 .error-msg { color: #f23f43; font-size: 13px; margin-top: 12px; display: none; }
 
-/* 🏢 LAYOUT MULTI-SERVER */
 .app-container { display: flex; width: 100vw; height: 100vh; flex: 1; }
 
 .guilds-sidebar {
@@ -100,7 +97,6 @@ body {
 }
 .guild-icon-wrap:hover .guild-tooltip { visibility: visible; opacity: 1; left: 84px; }
 
-/* CANALES */
 .sidebar { width: 240px; background: var(--bg-sidebar); display: flex; flex-direction: column; flex-shrink: 0; }
 .sidebar-header { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .sidebar-header h2 { margin: 0; font-size: 15px; font-weight: bold; }
@@ -125,7 +121,6 @@ body {
   top: -2px; right: -2px; min-width: 18px; height: 18px; line-height: 18px; border-radius: 9px;
 }
 
-/* CHAT */
 .chat { flex: 1; background: var(--bg-chat); display: flex; flex-direction: column; position: relative; }
 .chat-header {
   height: 48px; display: flex; align-items: center; justify-content: space-between;
@@ -137,29 +132,25 @@ body {
 @keyframes fadeInMsg { to { opacity: 1; } }
 .msg:hover { background: rgba(0, 0, 0, 0.12); }
 .avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; }
-.content { display: flex; flex-direction: column; flex: 1; }
+.content { display: flex; flex-direction: column; }
 .top { display: flex; gap: 8px; align-items: baseline; }
 .name { font-weight: 500; color: #fff; font-size: 14px; }
 .time { font-size: 11px; color: var(--text-muted); }
 .username { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
 .text { color: #dbdee1; margin-top: 3px; font-size: 14.5px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
 
-/* 🖼️ MEDIA MULTIMEDIA INCRUSTADA (DISCORD LOOK) */
+/* 🖼️ MEDIA EMEDIDO (Imágenes y Videos) */
 .media-attachment {
-  margin-top: 8px; max-width: 400px; max-height: 300px; border-radius: 8px;
-  overflow: hidden; display: block; border: 1px solid rgba(255,255,255,0.05);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  margin-top: 6px; max-width: 400px; max-height: 300px; border-radius: 8px; overflow: hidden; display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 .media-attachment img, .media-attachment video {
-  width: 100%; height: 100%; object-fit: contain; max-height: 300px; background: #111214;
+  width: 100%; height: 100%; max-height: 300px; object-fit: contain; background: #111214;
 }
 
-/* 🔴 SEPARADOR ROJO */
 .unread-divider { display: flex; align-items: center; justify-content: center; margin: 10px 0; position: relative; height: 20px; width: 100%; }
 .unread-divider::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background-color: #f23f43; }
 .unread-divider span { background-color: #f23f43; color: white; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: bold; z-index: 2; position: relative; }
 
-/* MIEMBROS */
 .members-sidebar { width: 240px; background: var(--bg-members); display: flex; flex-direction: column; border-left: 1px solid rgba(0,0,0,0.2); flex-shrink: 0; transition: all 0.25s ease-in-out; }
 .members-sidebar.hidden { width: 0; opacity: 0; overflow: hidden; border-left: none; }
 .members-title { padding: 16px 16px 8px 16px; font-size: 11px; font-weight: bold; color: var(--text-muted); letter-spacing: 0.5px; }
@@ -170,7 +161,6 @@ body {
 .member-avatar-container { position: relative; width: 32px; height: 32px; flex-shrink: 0; }
 .member-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; }
 
-/* ESTADOS REALES DISCORD */
 .status-dot { position: absolute; bottom: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bg-sidebar); }
 .status-dot.online { background-color: var(--online); }
 .status-dot.idle { background-color: var(--idle); border-radius: 50% 50% 0 50%; transform: rotate(-45deg); width: 8px; height: 8px; }
@@ -183,7 +173,6 @@ body {
 .member-sub { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
 .status-emoji { width: 14px; height: 14px; object-fit: contain; flex-shrink: 0; }
 
-/* 🎴 POPOUT DE PERFIL CLICKEABLE CON ANIMACIÓN */
 .profile-popout {
   position: fixed; right: 250px; width: 260px; background: #111214; border-radius: 12px;
   box-shadow: 0 16px 36px rgba(0,0,0,0.8); z-index: 1000; display: none; flex-direction: column;
@@ -205,8 +194,7 @@ body {
 .toggle-members-btn { background: transparent; border: 1px solid rgba(255,255,255,0.08); padding: 6px 12px; border-radius: 4px; font-size: 13px; color: var(--text-main); cursor: pointer; transition: 0.15s; font-family: inherit; }
 .toggle-members-btn:hover { background: rgba(255,255,255,0.06); }
 
-/* Indicador de Escritura */
-.typing-indicator { padding: 0 16px; font-size: 12px; color: var(--text-muted); height: 20px; font-weight: 500; font-family: inherit; opacity: 0; display: block; transition: opacity 0.2s ease; }
+.typing-indicator { padding: 0 16px; font-size: 12px; color: var(--text-muted); height: 20px; font-weight: 500; font-family: inherit; transition: opacity 0.2s; }
 
 .input { padding: 0 16px 20px 16px; display: flex; gap: 10px; }
 input { flex: 1; padding: 12px; border: none; border-radius: 8px; background: #383a40; color: white; font-size: 14.5px; font-family: inherit; }
