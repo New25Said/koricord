@@ -29,11 +29,14 @@ let isWindowFocused = true;
 let unreadCount = 0;
 let lastMessageDividerAdded = false;
 
+// Almacén local de conteo de no leídos por canal y por servidor
+let channelUnreads = {};
+let serverUnreads = {};
+
 const popout = document.createElement("div");
 popout.className = "profile-popout";
 document.body.appendChild(popout);
 
-// Evento para cerrar la tarjeta de perfil si se hace click fuera
 document.addEventListener("click", (e) => {
   if (!popout.contains(e.target) && !e.target.closest(".member-item")) {
     popout.style.display = "none";
@@ -83,19 +86,17 @@ document.getElementById("loginInput").addEventListener("keydown", (e) => {
 });
 
 function initApp() {
-  // 1. Obtener ID del bot para reconocerte a ti mismo
   onValue(ref(db, "botConfig"), (snap) => {
     const data = snap.val();
     if(data) botId = data.id || "";
   });
 
-  // 2. Escuchar Múltiples Servidores en Tiempo Real
   onValue(ref(db, "serverConfig"), (snap) => {
     serversData = snap.val() || {};
     renderServers();
+    updateBadgesVisibility();
   });
 
-  // 3. Estado de Escritura
   onValue(ref(db, "typing status"), (snap) => {
     const data = snap.val();
     if (data && data.isTyping && data.user !== "WebUser" && data.channelId === currentChannelId) {
@@ -124,15 +125,21 @@ function renderServers() {
   Object.values(serversData).forEach((srv, idx) => {
     const wrap = document.createElement("div");
     wrap.className = `guild-icon-wrap ${currentServerId === srv.id || (!currentServerId && idx === 0) ? 'active' : ''}`;
+    wrap.id = `guild-${srv.id}`;
     
     const iconHtml = srv.icon 
       ? `<img src="${srv.icon}">` 
       : `<div>${srv.name[0].toUpperCase()}</div>`;
 
+    const badge = document.createElement("div");
+    badge.className = "unread-badge";
+    badge.id = `sbadge-${srv.id}`;
+
     wrap.innerHTML = `
       <div class="guild-icon">${iconHtml}</div>
       <span class="guild-tooltip">${srv.name}</span>
     `;
+    wrap.appendChild(badge);
 
     if (!currentServerId && idx === 0) {
       selectServer(srv.id);
@@ -154,7 +161,9 @@ function selectServer(serverId) {
 
   document.getElementById("serverTitle").innerText = srv.name;
   
-  // Renderizar Canales de este Servidor
+  // Limpiar unreads acumulados del servidor al hacer click en él
+  serverUnreads[serverId] = 0;
+  
   const channelsList = document.getElementById("channelsList");
   channelsList.innerHTML = "";
   currentChannelId = "";
@@ -182,10 +191,11 @@ function selectServer(serverId) {
     });
   }
 
-  // Escuchar Miembros en Tiempo Real de forma indexada y directa sin delays
   onValue(ref(db, `serverMembers/${currentServerId}`), (snap) => {
     renderMembers(snap.val());
   });
+  
+  updateBadgesVisibility();
 }
 
 function renderMembers(members) {
@@ -208,7 +218,6 @@ function renderMembers(members) {
     const info = document.createElement("div");
     info.className = "member-info";
     
-    // Si eres tú (Kori), se renderiza tu tag real
     const subText = m.customStatus ? m.customStatus : (m.isBot ? '🤖 BOT' : `@${m.username}`);
 
     info.innerHTML = `
@@ -218,7 +227,6 @@ function renderMembers(members) {
 
     item.appendChild(avContainer); item.appendChild(info);
 
-    // Muestra Info completa al hacer CLICK (Regla de oro + Sin cortar estados con scrolls internos)
     item.onclick = (e) => {
       e.stopPropagation();
       const rect = item.getBoundingClientRect();
@@ -254,29 +262,68 @@ function switchChannel(id, name) {
     else btn.classList.remove("active");
   });
 
-  const badge = document.getElementById(`badge-${id}`);
-  if (badge) badge.style.display = "none";
+  // Limpiar conteo del canal actual
+  channelUnreads[id] = 0;
 
   lastMessageDividerAdded = false;
   clearUnreadDividers();
+  updateBadgesVisibility();
   filterMessages();
 }
 
 function clearUnreadDividers() { document.querySelectorAll(".unread-divider").forEach(d => d.remove()); }
 
+function updateBadgesVisibility() {
+  // Actualizar globos de canales visibles
+  Object.keys(channelUnreads).forEach(chId => {
+    const badge = document.getElementById(`badge-${chId}`);
+    if (badge) {
+      if (channelUnreads[chId] > 0 && chId !== currentChannelId) {
+        badge.innerText = channelUnreads[chId];
+        badge.style.display = "flex";
+      } else {
+        badge.style.display = "none";
+      }
+    }
+  });
+
+  // Actualizar globos de servidores
+  Object.keys(serverUnreads).forEach(srvId => {
+    const sbadge = document.getElementById(`sbadge-${srvId}`);
+    if (sbadge) {
+      if (serverUnreads[srvId] > 0 && srvId !== currentServerId) {
+        sbadge.innerText = serverUnreads[srvId];
+        sbadge.style.display = "flex";
+      } else {
+        sbadge.style.display = "none";
+      }
+    }
+  });
+}
+
 function processMessage(data, type) {
   const targetChannelId = data.channelId || currentChannelId;
+  const targetGuildId = data.guildId || currentServerId;
   
   if (targetChannelId !== currentChannelId || !isWindowFocused) {
     playNotificationSound();
+    
+    // Sumar mensaje no leído al canal correspondiente
     if (targetChannelId !== currentChannelId) {
-      const badge = document.getElementById(`badge-${targetChannelId}`);
-      if (badge) badge.style.display = "block";
+      channelUnreads[targetChannelId] = (channelUnreads[targetChannelId] || 0) + 1;
     }
+
+    // Sumar mensaje no leído al servidor correspondiente si no estás en él
+    if (targetGuildId && targetGuildId !== currentServerId) {
+      serverUnreads[targetGuildId] = (serverUnreads[targetGuildId] || 0) + 1;
+    }
+
     if (!isWindowFocused) {
       unreadCount++;
       document.title = `🔴 (${unreadCount}) KoriCord Futurist`;
     }
+    
+    updateBadgesVisibility();
   }
 
   if (!isWindowFocused && targetChannelId === currentChannelId && !lastMessageDividerAdded) {
@@ -295,7 +342,6 @@ function processMessage(data, type) {
   div.dataset.channelId = targetChannelId;
   const timeStr = new Date(msgTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
-  // Verificar si el mensaje es tuyo (Kori) en Discord o Web para unificar tu foto real
   let nameToShow = data.nickname || data.username;
   let avatarUrl = data.avatar;
 
@@ -305,9 +351,6 @@ function processMessage(data, type) {
     if (myDiscordProfile) {
       nameToShow = myDiscordProfile.nickname;
       avatarUrl = myDiscordProfile.avatar;
-    } else {
-      nameToShow = botName;
-      avatarUrl = botAvatar;
     }
   }
 
