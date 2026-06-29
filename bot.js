@@ -16,10 +16,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static("public"));
-
-app.listen(PORT, () => {
-  console.log("🌐 Web activa en Render");
-});
+app.listen(PORT, () => console.log("🌐 Web activa en Render"));
 
 /* 🤖 DISCORD BOT */
 const client = new Client({
@@ -32,70 +29,84 @@ const client = new Client({
   ]
 });
 
-// Sincronizar canales e info del servidor
-async function syncServerData() {
-  const guild = client.guilds.cache.first();
-  if (!guild) return;
+// Sincronizar todos los servidores y canales en un solo mapa estructurado
+async function syncServers() {
+  const serversMap = {};
+  
+  for (const [guildId, guild] of client.guilds.cache) {
+    const channels = guild.channels.cache
+      .filter(c => c.isTextBased())
+      .map(c => ({ id: c.id, name: c.name }));
 
-  const channels = guild.channels.cache
-    .filter(c => c.isTextBased())
-    .map(c => ({ id: c.id, name: c.name }));
-
-  await db.ref("serverConfig").set({
-    serverName: guild.name,
-    serverIcon: guild.iconURL({ extension: "png", size: 128 }) || "",
-    channels: channels
-  });
+    serversMap[guildId] = {
+      id: guildId,
+      name: guild.name,
+      icon: guild.iconURL({ extension: "png", size: 128 }) || "",
+      channels: channels
+    };
+  }
+  
+  await db.ref("serverConfig").set(serversMap);
 }
 
-// Sincronizar Miembros con Perfil Completo (Banner, Estado, Actividad)
-async function syncMembers() {
-  const guild = client.guilds.cache.first();
-  if (!guild) return;
+// Sincronizar un miembro individual inmediatamente (Evita Delays de carga masiva)
+async function syncSingleMember(member) {
+  if (!member) return;
+  try {
+    let userFull = member.user;
+    try {
+      userFull = await client.users.fetch(member.user.id, { force: true });
+    } catch (e) {}
 
+    let status = member.presence?.status || "offline";
+    if (status === "invisible") status = "offline";
+
+    // Detectar Actividades
+    let activityText = "";
+    if (member.presence?.activities && member.presence.activities.length > 0) {
+      const currentAct = member.presence.activities.find(a => a.type !== 4);
+      if (currentAct) {
+        const typeNames = ["Jugando a", "Transmitiendo", "Escuchando", "Viendo", "Compitiendo en"];
+        activityText = `${typeNames[currentAct.type] || "Jugando a"} ${currentAct.name}`;
+      }
+    }
+
+    // Detectar Estado Personalizado con su Emoji
+    const customStatusObj = member.presence?.activities.find(a => a.type === 4);
+    let customStatusText = "";
+    if (customStatusObj) {
+      const emojiPrefix = customStatusObj.emoji ? (customStatusObj.emoji.id ? `<img class="status-emoji" src="https://cdn.discordapp.com/emojis/${customStatusObj.emoji.id}.png">` : customStatusObj.emoji.name + " ") : "";
+      customStatusText = emojiPrefix + (customStatusObj.state || "");
+    }
+
+    const memberData = {
+      id: member.user.id,
+      username: member.user.username,
+      nickname: member.displayName,
+      avatar: member.user.displayAvatarURL({ extension: "png", size: 128 }),
+      bannerColor: userFull.hexAccentColor || "#5865f2",
+      status: status,
+      customStatus: customStatusText,
+      activity: activityText,
+      isBot: member.user.bot
+    };
+
+    // Guardar indexado por servidor y usuario para actualización instantánea
+    await db.ref(`serverMembers/${member.guild.id}/${member.user.id}`).set(memberData);
+  } catch (err) {
+    console.error("Error al sincronizar miembro individual:", err);
+  }
+}
+
+// Sincronizar todos los miembros de un servidor (Solo al iniciar)
+async function syncAllGuildMembers(guild) {
   try {
     const membersFetch = await guild.members.fetch({ withPresences: true });
-    
-    const membersList = await Promise.all(membersFetch.map(async (m) => {
-      // Forzar fetch de usuario para obtener el color del banner
-      let userFull = m.user;
-      try {
-        userFull = await client.users.fetch(m.user.id, { force: true });
-      } catch(e) {}
-
-      let status = m.presence?.status || "offline";
-      if (status === "invisible") status = "offline";
-
-      // Obtener actividades (juegos, Spotify, etc.)
-      let activityText = "";
-      if (m.presence?.activities && m.presence.activities.length > 0) {
-        const currentAct = m.presence.activities.find(a => a.type !== 4); // Ignorar estado personalizado en texto plano aquí
-        if (currentAct) {
-          const typeNames = ["Jugando a", "Transmitiendo", "Escuchando", "Viendo", "Compitiendo en"];
-          activityText = `${typeNames[currentAct.type] || "Jugando a"} ${currentAct.name}`;
-        }
-      }
-
-      // Obtener el estado personalizado en texto
-      const customStatusObj = m.presence?.activities.find(a => a.type === 4);
-      const customStatusText = customStatusObj ? customStatusObj.state || "" : "";
-
-      return {
-        id: m.user.id,
-        username: m.user.username,
-        nickname: m.displayName,
-        avatar: m.user.displayAvatarURL({ extension: "png", size: 128 }),
-        bannerColor: userFull.hexAccentColor || "#5865f2",
-        status: status, // online, idle, dnd, offline
-        customStatus: customStatusText,
-        activity: activityText,
-        isBot: m.user.bot
-      };
-    }));
-
-    await db.ref("serverMembers").set(membersList);
-  } catch (err) {
-    console.error("Error al sincronizar miembros:", err);
+    for (const [id, member] of membersFetch) {
+      await syncSingleMember(member);
+    }
+  } catch (e) {
+    console.error("Error cargando miembros iniciales de gremio:", e);
   }
 }
 
@@ -104,26 +115,36 @@ client.once("ready", async () => {
   
   try {
     await db.ref("botConfig").set({
+      id: client.user.id,
       username: client.user.username,
       avatar: client.user.displayAvatarURL({ extension: "png", size: 128 })
     });
-    await syncServerData();
-    await syncMembers();
+    await syncServers();
+    
+    // Carga inicial de todos los servidores soportados
+    for (const [id, guild] of client.guilds.cache) {
+      await syncAllGuildMembers(guild);
+    }
   } catch (err) {
     console.error("Error en inicialización:", err);
   }
 });
 
-// Escuchas en tiempo real para actualización al milisegundo
-client.on("guildUpdate", syncServerData);
-client.on("channelCreate", syncServerData);
-client.on("channelDelete", syncServerData);
-client.on("channelUpdate", syncServerData);
+// Eventos de Servidores y Canales
+client.on("guildCreate", async (guild) => { await syncServers(); await syncAllGuildMembers(guild); });
+client.on("guildDelete", syncServers);
+client.on("guildUpdate", syncServers);
+client.on("channelCreate", syncServers);
+client.on("channelDelete", syncServers);
+client.on("channelUpdate", syncServers);
 
-client.on("presenceUpdate", syncMembers);
-client.on("guildMemberAdd", syncMembers);
-client.on("guildMemberRemove", syncMembers);
-client.on("guildMemberUpdate", syncMembers);
+// Eventos de Presencia al milisegundo por usuario
+client.on("presenceUpdate", (oldP, newP) => { if (newP?.member) syncSingleMember(newP.member); });
+client.on("guildMemberAdd", syncSingleMember);
+client.on("guildMemberUpdate", syncSingleMember);
+client.on("guildMemberRemove", async (member) => {
+  await db.ref(`serverMembers/${member.guild.id}/${member.user.id}`).remove();
+});
 
 /* 💬 DISCORD → FIREBASE */
 client.on("messageCreate", async (message) => {
@@ -135,6 +156,7 @@ client.on("messageCreate", async (message) => {
     avatar: message.author.displayAvatarURL({ extension: "png", size: 128 }),
     text: message.content,
     channelId: message.channel.id,
+    guildId: message.guild?.id || "",
     server: message.guild?.name || "DM",
     timestamp: Date.now()
   });
@@ -151,7 +173,7 @@ db.ref("webMessages").on("child_added", async (snap) => {
       await channel.send(data.text);
     }
   } catch (err) {
-    console.error("Error al enviar mensaje a Discord:", err);
+    console.error("Error al enviar mensaje:", err);
   }
 });
 
