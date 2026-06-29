@@ -165,7 +165,6 @@ client.on("typingStart", (typing) => {
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
-  // Mapear archivos adjuntos (imágenes o videos)
   const attachments = message.attachments.map(a => ({
     url: a.url,
     name: a.name,
