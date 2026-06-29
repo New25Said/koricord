@@ -8,6 +8,7 @@
 </head>
 <body>
 
+  <!-- 🔐 PANTALLA DE LOGIN -->
   <div id="loginScreen" class="login-screen">
     <div class="login-box">
       <h3>¿Eres Kori?</h3>
@@ -17,37 +18,34 @@
     </div>
   </div>
 
+  <!-- 🏢 INTERFAZ PRINCIPAL -->
   <div class="app-container">
     
-    <div class="guilds-sidebar">
-      <div class="guild-icon-wrap" id="guildWrapper">
-        <div class="guild-icon" id="guildIcon">K</div>
-        <span class="guild-tooltip" id="guildTooltip">Cargando servidor...</span>
-      </div>
+    <!-- Barra de Servidores Múltiples -->
+    <div class="guilds-sidebar" id="guildsSidebar">
+      <!-- Los servidores se inyectan dinámicamente aquí -->
     </div>
 
+    <!-- Canales del Servidor Seleccionado -->
     <div class="sidebar">
       <div class="sidebar-header">
         <h2 id="serverTitle">KoriCord</h2>
         <div class="sub">2PyM 🌐</div>
       </div>
-      <div class="channels-list" id="channelsList">
-        </div>
+      <div class="channels-list" id="channelsList"></div>
     </div>
 
+    <!-- Chat Principal -->
     <div class="chat">
       <div class="chat-header">
         <div class="header-left">
           <span class="hashtag">#</span>
-          <span id="currentChannelName">general</span>
+          <span id="currentChannelName">selecciona-canal</span>
         </div>
-        <button class="toggle-members-btn" onclick="toggleMembersList()">
-          👥 Miembros
-        </button>
+        <button class="toggle-members-btn" onclick="toggleMembersList()">👥 Miembros</button>
       </div>
       
       <div id="messages" class="messages"></div>
-      
       <div id="typing" class="typing-indicator"></div>
       
       <div class="input">
@@ -56,10 +54,10 @@
       </div>
     </div>
 
+    <!-- Lista de Miembros -->
     <div class="members-sidebar" id="membersSidebar">
       <div class="members-title">MIEMBROS</div>
-      <div class="members-list" id="membersList">
-        </div>
+      <div class="members-list" id="membersList"></div>
     </div>
 
   </div>
