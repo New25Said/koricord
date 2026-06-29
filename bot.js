@@ -29,10 +29,8 @@ const client = new Client({
   ]
 });
 
-// Sincronizar todos los servidores y canales en un solo mapa estructurado
 async function syncServers() {
   const serversMap = {};
-  
   for (const [guildId, guild] of client.guilds.cache) {
     const channels = guild.channels.cache
       .filter(c => c.isTextBased())
@@ -45,11 +43,9 @@ async function syncServers() {
       channels: channels
     };
   }
-  
   await db.ref("serverConfig").set(serversMap);
 }
 
-// Sincronizar un miembro individual inmediatamente (Evita Delays de carga masiva)
 async function syncSingleMember(member) {
   if (!member) return;
   try {
@@ -61,17 +57,40 @@ async function syncSingleMember(member) {
     let status = member.presence?.status || "offline";
     if (status === "invisible") status = "offline";
 
-    // Detectar Actividades
+    // Detectar Actividades Detalladas (Juegos y Spotify con autor/canción/portada)
     let activityText = "";
+    let spotifyDetails = null;
+
     if (member.presence?.activities && member.presence.activities.length > 0) {
-      const currentAct = member.presence.activities.find(a => a.type !== 4);
-      if (currentAct) {
-        const typeNames = ["Jugando a", "Transmitiendo", "Escuchando", "Viendo", "Compitiendo en"];
-        activityText = `${typeNames[currentAct.type] || "Jugando a"} ${currentAct.name}`;
+      // Buscar si está escuchando Spotify específicamente
+      const spotifyAct = member.presence.activities.find(a => a.name === "Spotify");
+      
+      if (spotifyAct) {
+        let spotifyTrackImg = "";
+        if (spotifyAct.assets && spotifyAct.assets.largeImage) {
+          // Extraer la ID real de la portada de Spotify
+          const imgId = spotifyAct.assets.largeImage.replace("spotify:", "");
+          spotifyTrackImg = `https://i.scdn.co/image/${imgId}`;
+        }
+        
+        spotifyDetails = {
+          song: spotifyAct.details || "Canción desconocida",
+          artist: spotifyAct.state || "Artista desconocido",
+          album: spotifyAct.assets?.largeText || "",
+          image: spotifyTrackImg
+        };
+        activityText = `Escuchando Spotify`;
+      } else {
+        // Si es otro tipo de juego o actividad regular
+        const currentAct = member.presence.activities.find(a => a.type !== 4);
+        if (currentAct) {
+          const typeNames = ["Jugando a", "Transmitiendo", "Escuchando", "Viendo", "Compitiendo en"];
+          activityText = `${typeNames[currentAct.type] || "Jugando a"} ${currentAct.name}`;
+          if (currentAct.details) activityText += ` - ${currentAct.details}`;
+        }
       }
     }
 
-    // Detectar Estado Personalizado con su Emoji
     const customStatusObj = member.presence?.activities.find(a => a.type === 4);
     let customStatusText = "";
     if (customStatusObj) {
@@ -88,12 +107,13 @@ async function syncSingleMember(member) {
       status: status,
       customStatus: customStatusText,
       activity: activityText,
+      spotify: spotifyDetails, // Se acopla la info detallada al nodo
       isBot: member.user.bot
     };
 
     await db.ref(`serverMembers/${member.guild.id}/${member.user.id}`).set(memberData);
   } catch (err) {
-    console.error("Error al sincronizar miembro individual:", err);
+    console.error("Error al sincronizar miembro:", err);
   }
 }
 
@@ -103,14 +123,11 @@ async function syncAllGuildMembers(guild) {
     for (const [id, member] of membersFetch) {
       await syncSingleMember(member);
     }
-  } catch (e) {
-    console.error("Error cargando miembros iniciales de gremio:", e);
-  }
+  } catch (e) {}
 }
 
 client.once("ready", async () => {
   console.log(`🤖 Logueado como ${client.user.tag}`);
-  
   try {
     await db.ref("botConfig").set({
       id: client.user.id,
@@ -118,13 +135,10 @@ client.once("ready", async () => {
       avatar: client.user.displayAvatarURL({ extension: "png", size: 128 })
     });
     await syncServers();
-    
     for (const [id, guild] of client.guilds.cache) {
       await syncAllGuildMembers(guild);
     }
-  } catch (err) {
-    console.error("Error en inicialización:", err);
-  }
+  } catch (err) {}
 });
 
 client.on("guildCreate", async (guild) => { await syncServers(); await syncAllGuildMembers(guild); });
@@ -141,7 +155,6 @@ client.on("guildMemberRemove", async (member) => {
   await db.ref(`serverMembers/${member.guild.id}/${member.user.id}`).remove();
 });
 
-// Detectar cuando alguien escribe en Discord y pasarlo a Firebase de inmediato
 client.on("typingStart", (typing) => {
   if (typing.user.bot) return;
   db.ref(`typingStatus/${typing.channel.id}`).set({
@@ -150,7 +163,6 @@ client.on("typingStart", (typing) => {
     timestamp: Date.now()
   });
 
-  // Apagar el indicador automáticamente tras 4 segundos si Discord no manda actualización
   setTimeout(() => {
     db.ref(`typingStatus/${typing.channel.id}`).transaction((current) => {
       if (current && Date.now() - current.timestamp >= 4000) {
@@ -161,10 +173,8 @@ client.on("typingStart", (typing) => {
   }, 4100);
 });
 
-/* 💬 DISCORD → FIREBASE */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
-
   const attachments = message.attachments.map(a => ({
     url: a.url,
     name: a.name,
@@ -184,19 +194,15 @@ client.on("messageCreate", async (message) => {
   });
 });
 
-/* 🌐 WEB → DISCORD */
 db.ref("webMessages").on("child_added", async (snap) => {
   const data = snap.val();
   if (!data?.text || !data?.channelId) return;
-
   try {
     const channel = await client.channels.fetch(data.channelId);
     if (channel && channel.isTextBased()) {
       await channel.send(data.text);
     }
-  } catch (err) {
-    console.error("Error al enviar mensaje:", err);
-  }
+  } catch (err) {}
 });
 
 client.login(process.env.DISCORD_TOKEN);
