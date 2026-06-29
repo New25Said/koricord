@@ -36,10 +36,12 @@ const popout = document.createElement("div");
 popout.className = "profile-popout";
 document.body.appendChild(popout);
 
+// Click en cualquier lado quita la tarjeta de perfil y elimina las líneas rojas
 document.addEventListener("click", (e) => {
   if (!popout.contains(e.target) && !e.target.closest(".member-item")) {
     popout.style.display = "none";
   }
+  clearUnreadDividers();
 });
 
 window.addEventListener("focus", () => {
@@ -95,15 +97,15 @@ function initApp() {
     renderServers();
   });
 
-  // 3. Sistema de Escritura Avanzado Escuchando Todos los Canales
+  // Escuchador de escritura en tiempo real corregido
   onValue(ref(db, "typing status"), (snap) => {
     const data = snap.val();
+    const indicator = document.getElementById("typing");
     if (data && data.isTyping && data.user !== "WebUser" && data.channelId === currentChannelId) {
-      document.getElementById("typing").innerText = `${data.user} está escribiendo...`;
-      document.getElementById("typing").style.opacity = "1";
+      indicator.innerText = `${data.user} está escribiendo...`;
+      indicator.style.opacity = "1";
     } else {
-      document.getElementById("typing").innerText = "";
-      document.getElementById("typing").style.opacity = "0";
+      indicator.style.opacity = "0";
     }
   });
 
@@ -203,13 +205,11 @@ function selectServer(serverId) {
     });
   }
 
-  // Cargar miembros del servidor seleccionado
   onValue(ref(db, `serverMembers/${currentServerId}`), (snap) => {
     renderMembers(snap.val());
   });
 }
 
-// Variable para guardar el perfil de Kori en memoria y mapearlo en sus mensajes enviados
 let cachedKoriProfile = null;
 
 function renderMembers(members) {
@@ -218,7 +218,6 @@ function renderMembers(members) {
   if (!members) return;
 
   Object.values(members).forEach(m => {
-    // Si este miembro coincide con el ID del Bot, asumimos que es el perfil real de Kori
     if (m.id === botId) {
       cachedKoriProfile = m;
     }
@@ -292,6 +291,26 @@ function switchChannel(id, name) {
 
 function clearUnreadDividers() { document.querySelectorAll(".unread-divider").forEach(d => d.remove()); }
 
+// Función para detectar URLs de Imágenes o Videos y convertirlas en contenido incrustado
+function parseMediaAttachments(text) {
+  if (!text) return "";
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const matches = text.match(urlRegex);
+  let mediaHtml = "";
+
+  if (matches) {
+    matches.forEach(url => {
+      const cleanUrl = url.split('?')[0].toLowerCase();
+      if (cleanUrl.match(/\.(jpeg|jpg|gif|png|webp)$/)) {
+        mediaHtml += `<div class="media-attachment"><img src="${url}"></div>`;
+      } else if (cleanUrl.match(/\.(mp4|webm|mov)$/)) {
+        mediaHtml += `<div class="media-attachment"><video src="${url}" controls></video></div>`;
+      }
+    });
+  }
+  return mediaHtml;
+}
+
 function processMessage(data, type) {
   const targetChannelId = data.channelId || currentChannelId;
   const targetGuildId = data.guildId || "";
@@ -323,7 +342,8 @@ function processMessage(data, type) {
     }
   }
 
-  if (type !== "web" && !isWindowFocused && targetChannelId === currentChannelId && !lastMessageDividerAdded) {
+  // 🔴 CONDICIÓN EXTRA: Si estás fuera de la página e ingresa un mensaje al MISMO chat donde estás
+  if (!isWindowFocused && targetChannelId === currentChannelId && !lastMessageDividerAdded) {
     const divider = document.createElement("div");
     divider.className = "unread-divider";
     divider.innerHTML = "<span>NUEVOS MENSAJES</span>";
@@ -341,7 +361,6 @@ function processMessage(data, type) {
   let nameToShow = data.nickname || data.username;
   let avatarUrl = data.avatar;
 
-  // Lógica de perfil corregida: Mapea tu foto real de Discord usando el cache en vivo de los miembros
   if (type === "web" || data.authorId === botId || data.username === "WebUser") {
     if (cachedKoriProfile) {
       nameToShow = cachedKoriProfile.nickname || cachedKoriProfile.username;
@@ -356,6 +375,7 @@ function processMessage(data, type) {
     : `<div class="avatar">${nameToShow ? nameToShow[0].toUpperCase() : "K"}</div>`;
 
   const timeStr = new Date(msgTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  const mediaHtml = parseMediaAttachments(data.text);
 
   div.innerHTML = `
     ${avatarHtml}
@@ -366,6 +386,7 @@ function processMessage(data, type) {
       </div>
       ${data.username && data.username !== "WebUser" ? `<div class="username">@${data.username}</div>` : ''}
       <div class="text">${data.text}</div>
+      ${mediaHtml}
     </div>
   `;
 
@@ -383,7 +404,7 @@ function filterMessages() {
   const container = document.getElementById("messages");
   for (let child of container.children) {
     if (!child.dataset.channelId || child.dataset.channelId === currentChannelId) {
-      child.style.display = "flex";
+      child.style.display = child.classList.contains("unread-divider") ? "flex" : "flex";
     } else {
       child.style.display = "none";
     }
