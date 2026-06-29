@@ -5,7 +5,7 @@ import {
   push,
   set,
   onValue,
-  off
+  onChildAdded
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js";
 
 const firebaseConfig = {
@@ -23,17 +23,17 @@ const db = getDatabase(app);
 
 let botId = "";
 let serversData = {};
-let currentServerId = ""; 
-let currentChannelId = ""; 
+let currentServerId = ""; // Si está vacío "", significa que estamos viendo los MDs
+let currentChannelId = ""; // Guarda la ID de canal de servidor u ID de usuario si es MD
 let isWindowFocused = true;
 let unreadCount = 0;
+let lastMessageDividerAdded = false;
 
 let channelUnreadCounts = {};
 let serverUnreadCounts = {};
 let dmUnreadCounts = {};
-
 let currentTypingListener = null;
-let currentMessageListener = null;
+let currentDmMessageListener = null;
 
 const popout = document.createElement("div");
 popout.className = "profile-popout";
@@ -99,46 +99,11 @@ function initApp() {
     renderServers();
   });
 
-  // Listener en segundo plano exclusivo para controlar Globos de Notificaciones de Servidores
-  onValue(ref(db, "serverChannelMessages"), (snap) => {
-    const allChannels = snap.val();
-    if (!allChannels || !isWindowFocused) return;
-    
-    Object.keys(allChannels).forEach(chId => {
-      if (chId !== currentChannelId) {
-        // Encontrar a qué servidor pertenece este canal
-        Object.values(serversData).forEach(srv => {
-          const match = srv.channels?.find(c => c.id === chId);
-          if (match && currentServerId !== srv.id) {
-            serverUnreadCounts[srv.id] = (serverUnreadCounts[srv.id] || 0) + 1;
-            const sBadge = document.getElementById(`server-badge-${srv.id}`);
-            if (sBadge) { sBadge.innerText = serverUnreadCounts[srv.id]; sBadge.style.display = "block"; }
-          }
-        });
-
-        channelUnreadCounts[chId] = (channelUnreadCounts[chId] || 0) + 1;
-        const cBadge = document.getElementById(`badge-${chId}`);
-        if (cBadge) { cBadge.innerText = channelUnreadCounts[chId]; cBadge.style.display = "block"; }
-        playNotificationSound();
-      }
-    });
-  });
-
-  // Listener en segundo plano exclusivo para controlar Globos de Notificaciones de MDs
-  onValue(ref(db, "dmMessages"), (snap) => {
-    const allDms = snap.val();
-    if (!allDms) return;
-
-    Object.keys(allDms).forEach(userId => {
-      if (currentServerId === "" && userId === currentChannelId) return; // Si estás dentro de su chat, ignorar globo
-      
-      dmUnreadCounts[userId] = (dmUnreadCounts[userId] || 0) + 1;
-      const dmBadge = document.getElementById(`badge-dm-${userId}`);
-      if (dmBadge) { dmBadge.innerText = dmUnreadCounts[userId]; dmBadge.style.display = "block"; }
-      playNotificationSound();
-    });
-  });
+  // Escuchar Mensajes Normales (Servidores)
+  onChildAdded(ref(db, "discordMessages"), (snap) => { processMessage(snap.val(), "discord"); });
+  onChildAdded(ref(db, "webMessages"), (snap) => { processMessage(snap.val(), "web"); });
   
+  // Seleccionar la vista de MDs por defecto al iniciar
   selectDMHome();
 }
 
@@ -162,7 +127,7 @@ function renderServers() {
     `;
     wrap.appendChild(serverBadge);
 
-    if (serverUnreadCounts[srv.id] && serverUnreadCounts[srv.id] > 0) {
+    if (serverUnreadCounts[srv.id] && serverUnreadCounts[srv.id] > 0 && currentServerId !== srv.id) {
       serverBadge.innerText = serverUnreadCounts[srv.id];
       serverBadge.style.display = "block";
     }
@@ -177,6 +142,7 @@ function renderServers() {
   });
 }
 
+// Cambiar la interfaz para el Modo Mensajes Directos (Estilo Home Discord)
 window.selectDMHome = function() {
   currentServerId = "";
   document.querySelectorAll(".guild-icon-wrap").forEach(w => w.classList.remove("active"));
@@ -188,12 +154,10 @@ window.selectDMHome = function() {
   document.getElementById("membersToggleBtn").style.display = "none";
   document.getElementById("membersSidebar").classList.add("hidden");
 
-  document.getElementById("messages").innerHTML = "";
-  currentChannelId = "";
-  document.getElementById("currentChannelName").innerText = "selecciona-un-chat";
-
+  // Escuchar la lista de chats privados abiertos en Firebase
   onValue(ref(db, "dmChats"), (snap) => {
-    renderDmChatsList(snap.val() || {});
+    const chats = snap.val() || {};
+    renderDmChatsList(chats);
   });
 };
 
@@ -202,6 +166,7 @@ function renderDmChatsList(chats) {
   channelsList.innerHTML = "";
 
   const chatArray = Object.values(chats).sort((a,b) => b.lastMessageTime - a.lastMessageTime);
+
   if (chatArray.length === 0) {
     channelsList.innerHTML = `<div style="padding:10px; color:var(--text-muted); font-size:13px; text-align:center;">No hay MDs activos</div>`;
     return;
@@ -225,17 +190,63 @@ function renderDmChatsList(chats) {
     badge.id = `badge-dm-${chat.id}`;
 
     if (!currentChannelId && idx === 0) {
-      switchChatEnvironment(chat.id, chat.nickname, true);
+      switchDmUser(chat.id, chat.nickname);
     }
 
-    if (dmUnreadCounts[chat.id] && dmUnreadCounts[chat.id] > 0) {
+    if (dmUnreadCounts[chat.id] && dmUnreadCounts[chat.id] > 0 && currentChannelId !== chat.id) {
       badge.innerText = dmUnreadCounts[chat.id];
       badge.style.display = "block";
     }
 
-    btn.onclick = () => switchChatEnvironment(chat.id, chat.nickname, true);
+    btn.onclick = () => switchDmUser(chat.id, chat.nickname);
     wrap.appendChild(btn); wrap.appendChild(badge);
     channelsList.appendChild(wrap);
+  });
+}
+
+function switchDmUser(userId, name) {
+  currentChannelId = userId;
+  document.getElementById("currentChannelName").innerText = name;
+
+  document.querySelectorAll(".channel-btn").forEach(btn => {
+    if(btn.innerText.trim() === name) btn.classList.add("active");
+    else btn.classList.remove("active");
+  });
+
+  dmUnreadCounts[userId] = 0;
+  const badge = document.getElementById(`badge-dm-${userId}`);
+  if (badge) badge.style.display = "none";
+
+  lastMessageDividerAdded = false;
+  clearUnreadDividers();
+  
+  // Limpiar chat anterior e inyectar el historial exclusivo de este MD
+  document.getElementById("messages").innerHTML = "";
+  if (currentDmMessageListener) currentDmMessageListener();
+
+  // Escuchar mensajes entrantes exclusivos de este MD indexado
+  currentDmMessageListener = onValue(ref(db, `dmMessages/${userId}`), (snap) => {
+    document.getElementById("messages").innerHTML = "";
+    const msgs = snap.val();
+    if (msgs) {
+      Object.values(msgs).forEach(msg => {
+        processMessage(msg, msg.username === "WebUser" ? "web" : "discord");
+      });
+    }
+  });
+
+  // Escucha del indicador de escritura para este MD privado
+  if (currentTypingListener) currentTypingListener();
+  currentTypingListener = onValue(ref(db, `typingStatus/${currentChannelId}`), (snap) => {
+    const data = snap.val();
+    const indicator = document.getElementById("typing");
+    if (data && data.isTyping && data.user !== cachedKoriProfile?.nickname) {
+      indicator.innerText = `${data.user} está escribiendo...`;
+      indicator.style.opacity = "1";
+    } else {
+      indicator.innerText = "";
+      indicator.style.opacity = "0";
+    }
   });
 }
 
@@ -247,8 +258,6 @@ function selectServer(serverId) {
   document.getElementById("serverTitle").innerText = srv.name;
   document.getElementById("chatHeaderPrefix").innerText = "#";
   document.getElementById("membersToggleBtn").style.display = "block";
-  document.getElementById("messages").innerHTML = "";
-  currentChannelId = "";
 
   serverUnreadCounts[serverId] = 0;
   const srvBadge = document.getElementById(`server-badge-${serverId}`);
@@ -256,6 +265,7 @@ function selectServer(serverId) {
 
   const channelsList = document.getElementById("channelsList");
   channelsList.innerHTML = "";
+  currentChannelId = "";
 
   if (srv.channels && srv.channels.length > 0) {
     srv.channels.forEach((ch, idx) => {
@@ -270,14 +280,14 @@ function selectServer(serverId) {
       badge.className = "unread-badge";
       badge.id = `badge-${ch.id}`;
 
-      if (idx === 0) switchChatEnvironment(ch.id, ch.name, false);
+      if (idx === 0) switchChannel(ch.id, ch.name);
 
-      if (channelUnreadCounts[ch.id] && channelUnreadCounts[ch.id] > 0) {
+      if (channelUnreadCounts[ch.id] && channelUnreadCounts[ch.id] > 0 && currentChannelId !== ch.id) {
         badge.innerText = channelUnreadCounts[ch.id];
         badge.style.display = "block";
       }
 
-      btn.onclick = () => switchChatEnvironment(ch.id, ch.name, false);
+      btn.onclick = () => switchChannel(ch.id, ch.name);
       wrap.appendChild(btn); wrap.appendChild(badge);
       channelsList.appendChild(wrap);
     });
@@ -288,62 +298,8 @@ function selectServer(serverId) {
   });
 }
 
-// REGLA DE ORO: Función unificada de carga de mensajes limpia para evitar duplicados y pérdidas de datos
-function switchChatEnvironment(targetId, targetName, isDMEnvironment) {
-  currentChannelId = targetId;
-  document.getElementById("currentChannelName").innerText = targetName;
-
-  document.querySelectorAll(".channel-btn").forEach(btn => {
-    if (btn.innerText.trim() === targetName || btn.innerText === targetName) btn.classList.add("active");
-    else btn.classList.remove("active");
-  });
-
-  // Apagar y resetear contadores locales
-  if (isDMEnvironment) {
-    dmUnreadCounts[targetId] = 0;
-    const b = document.getElementById(`badge-dm-${targetId}`); if (b) b.style.display = "none";
-  } else {
-    channelUnreadCounts[targetId] = 0;
-    const b = document.getElementById(`badge-${targetId}`); if (b) b.style.display = "none";
-  }
-
-  // Desconectar escuchas anteriores para evitar fugas de memoria
-  if (currentMessageListener) off(ref(db, currentMessageListener.path));
-  if (currentTypingListener) off(ref(db, currentTypingListener.path));
-
-  document.getElementById("messages").innerHTML = "";
-
-  // Determinar la ruta exacta del canal seleccionado en Firebase
-  const targetPath = isDMEnvironment ? `dmMessages/${targetId}` : `serverChannelMessages/${targetId}`;
-  
-  // Escucha Reactiva en tiempo real limpia y atómica
-  currentMessageListener = onValue(ref(db, targetPath), (snap) => {
-    document.getElementById("messages").innerHTML = "";
-    const messagesData = snap.val();
-    if (messagesData) {
-      Object.values(messagesData).forEach(msg => {
-        renderSingleMessageHTML(msg);
-      });
-    }
-    const container = document.getElementById("messages");
-    container.scrollTop = container.scrollHeight;
-  });
-
-  // Escucha del indicador de escritura de este canal
-  currentTypingListener = onValue(ref(db, `typingStatus/${currentChannelId}`), (snap) => {
-    const data = snap.val();
-    const indicator = document.getElementById("typing");
-    if (data && data.isTyping && data.user !== cachedKoriProfile?.nickname) {
-      indicator.innerText = `${data.user} está escribiendo...`;
-      indicator.style.opacity = "1";
-    } else {
-      indicator.innerText = "";
-      indicator.style.opacity = "0";
-    }
-  });
-}
-
 let cachedKoriProfile = null;
+
 function renderMembers(members) {
   const container = document.getElementById("membersList");
   container.innerHTML = "";
@@ -367,6 +323,7 @@ function renderMembers(members) {
     info.className = "member-info";
     
     const subText = m.customStatus ? m.customStatus : (m.isBot ? '🤖 BOT' : `@${m.username}`);
+
     info.innerHTML = `
       <div class="member-name">${m.nickname || m.username}</div>
       <div class="member-sub">${subText}</div>
@@ -413,22 +370,114 @@ function renderMembers(members) {
       `;
       popout.style.display = "flex";
     };
+
     container.appendChild(item);
+  });
+}
+
+function switchChannel(id, name) {
+  currentChannelId = id;
+  document.getElementById("currentChannelName").innerText = name;
+  if (currentDmMessageListener) { currentDmMessageListener(); currentDmMessageListener = null; }
+  
+  document.querySelectorAll(".channel-btn").forEach(btn => {
+    if(btn.innerText === name) btn.classList.add("active");
+    else btn.classList.remove("active");
+  });
+
+  channelUnreadCounts[id] = 0;
+  const badge = document.getElementById(`badge-${id}`);
+  if (badge) badge.style.display = "none";
+
+  lastMessageDividerAdded = false;
+  clearUnreadDividers();
+  
+  document.getElementById("messages").innerHTML = "";
+  filterMessages();
+
+  if (currentTypingListener) currentTypingListener();
+  currentTypingListener = onValue(ref(db, `typingStatus/${currentChannelId}`), (snap) => {
+    const data = snap.val();
+    const indicator = document.getElementById("typing");
+    if (data && data.isTyping && data.user !== cachedKoriProfile?.nickname) {
+      indicator.innerText = `${data.user} está escribiendo...`;
+      indicator.style.opacity = "1";
+    } else {
+      indicator.innerText = "";
+      indicator.style.opacity = "0";
+    }
   });
 }
 
 function clearUnreadDividers() { document.querySelectorAll(".unread-divider").forEach(d => d.remove()); }
 
-function renderSingleMessageHTML(data) {
+function processMessage(data, type) {
+  const targetChannelId = data.channelId || currentChannelId;
+  const targetGuildId = data.guildId || "";
+  const isMessageDM = data.userId ? true : false;
+  
+  // Despachar alertas si el mensaje no se originó en la vista web activa
+  if (type !== "web" && data.username !== "WebUser" && (isMessageDM ? currentServerId !== "" || currentChannelId !== data.userId : targetChannelId !== currentChannelId || !isWindowFocused)) {
+    playNotificationSound();
+    
+    if (isMessageDM) {
+      // Incrementar globo rojo numérico del MD
+      dmUnreadCounts[data.userId] = (dmUnreadCounts[data.userId] || 0) + 1;
+      const badge = document.getElementById(`badge-dm-${data.userId}`);
+      if (badge) {
+        badge.innerText = dmUnreadCounts[data.userId];
+        badge.style.display = "block";
+      }
+    } else {
+      // Servidores normales
+      if (targetChannelId !== currentChannelId) {
+        channelUnreadCounts[targetChannelId] = (channelUnreadCounts[targetChannelId] || 0) + 1;
+        const badge = document.getElementById(`badge-${targetChannelId}`);
+        if (badge) {
+          badge.innerText = channelUnreadCounts[targetChannelId];
+          badge.style.display = "block";
+        }
+      }
+      if (targetGuildId && targetGuildId !== currentServerId) {
+        serverUnreadCounts[targetGuildId] = (serverUnreadCounts[targetGuildId] || 0) + 1;
+        const srvBadge = document.getElementById(`server-badge-${targetGuildId}`);
+        if (srvBadge) {
+          srvBadge.innerText = serverUnreadCounts[targetGuildId];
+          srvBadge.style.display = "block";
+        }
+      }
+    }
+
+    if (!isWindowFocused) {
+      unreadCount++;
+      document.title = `🔴 (${unreadCount}) KoriCord Futurist`;
+    }
+  }
+
+  // Filtrar para no duplicar en la vista de servidores si el mensaje pertenece a un MD
+  if (!isMessageDM && currentServerId === "") return;
+  if (isMessageDM && currentServerId !== "") return;
+  if (isMessageDM && data.userId !== currentChannelId) return;
+
+  if (!isWindowFocused && !lastMessageDividerAdded) {
+    const divider = document.createElement("div");
+    divider.className = "unread-divider";
+    divider.innerHTML = "<span>NUEVOS MENSAJES</span>";
+    divider.dataset.time = (data.timestamp || data.time) - 1;
+    document.getElementById("messages").appendChild(divider);
+    lastMessageDividerAdded = true;
+  }
+
   const div = document.createElement("div");
   div.className = "msg";
   const msgTime = data.timestamp || data.time;
   div.dataset.time = msgTime;
+  div.dataset.channelId = targetChannelId;
 
   let nameToShow = data.nickname || data.username;
   let avatarUrl = data.avatar;
 
-  if (data.username === "WebUser") {
+  if (type === "web" || data.authorId === botId || data.username === "WebUser") {
     if (cachedKoriProfile) {
       nameToShow = cachedKoriProfile.nickname || cachedKoriProfile.username;
       avatarUrl = cachedKoriProfile.avatar;
@@ -467,7 +516,30 @@ function renderSingleMessageHTML(data) {
     </div>
   `;
 
-  document.getElementById("messages").appendChild(div);
+  const container = document.getElementById("messages");
+  const children = Array.from(container.children);
+  const nextSibling = children.find(child => parseInt(child.dataset.time) > msgTime);
+
+  if (nextSibling) container.insertBefore(div, nextSibling);
+  else container.appendChild(div);
+
+  filterMessages();
+}
+
+function filterMessages() {
+  const container = document.getElementById("messages");
+  for (let child of container.children) {
+    if (currentServerId === "") {
+      child.style.display = "flex"; // Los DMs se limpian reactivamente por evento onValue
+    } else {
+      if (!child.dataset.channelId || child.dataset.channelId === currentChannelId) {
+        child.style.display = "flex";
+      } else {
+        child.style.display = "none";
+      }
+    }
+  }
+  container.scrollTop = container.scrollHeight;
 }
 
 window.sendMessage = async function(){
@@ -483,21 +555,20 @@ window.sendMessage = async function(){
   };
 
   if (currentServerId === "") {
+    // Si estamos en la sección de MDs, armar la carga para chat privado
     payload.isDM = true;
     payload.userId = currentChannelId;
-    payload.channelId = currentChannelId;
-    // Inyectar a tu propio nodo local ordenado de MDs
+    
+    // Auto-inyectar el mensaje local en tu propio nodo privado de Firebase para verlo al instante
     await push(ref(db, `dmMessages/${currentChannelId}`), payload);
-  } else {
-    payload.channelId = currentChannelId;
-    payload.guildId = currentServerId;
-    // Inyectar al nodo local ordenado del canal del servidor
-    await push(ref(db, `serverChannelMessages/${currentChannelId}`), payload);
   }
 
-  // Despachar al bot para salida externa a Discord
+  // Despachar globalmente para que el bot de Node.js lo mande a Discord
+  payload.channelId = currentChannelId;
+  payload.guildId = currentServerId;
   await push(ref(db,"webMessages"), payload);
-  document.getElementById("msg").value = "";
+
+  document.getElementById("msg").value="";
 };
 
 document.getElementById("msg").addEventListener("keydown", (e) => {
