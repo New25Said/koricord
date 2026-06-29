@@ -151,7 +151,6 @@ window.selectDMHome = function() {
   document.getElementById("membersToggleBtn").style.display = "none";
   document.getElementById("membersSidebar").classList.add("hidden");
 
-  // Cirugía: Limpiar el chat por completo para que no queden remanentes del servidor anterior
   document.getElementById("messages").innerHTML = "";
   currentChannelId = "";
   document.getElementById("currentChannelName").innerText = "selecciona-un-chat";
@@ -259,8 +258,7 @@ function selectServer(serverId) {
   document.getElementById("chatHeaderPrefix").innerText = "#";
   document.getElementById("membersToggleBtn").style.display = "block";
 
-  // Cirugía: Limpiar el DOM al cambiar de servidor para obligar a re-filtrar todo limpiamente
-  document.getElementById("messages").innerHTML = "";
+  // REGLA DE ORO: Ya NO borramos .innerHTML de mensajes aquí para que los guardados en caché persistan
   currentChannelId = "";
 
   if (currentDmMessageListener) { currentDmMessageListener(); currentDmMessageListener = null; }
@@ -454,7 +452,6 @@ function processMessage(data, type) {
     }
   }
 
-  // Cirugía de Visualización: Filtramos de inmediato si el mensaje no pertenece al entorno activo antes de inyectar al DOM
   if (!isMessageDM && currentServerId === "") return;
   if (isMessageDM && currentServerId !== "") return;
 
@@ -506,7 +503,6 @@ function processMessage(data, type) {
     </div>
   `;
 
-  // Alerta de Línea Roja condicional
   if (!isWindowFocused && targetChannelId === currentChannelId && !lastMessageDividerAdded) {
     const divider = document.createElement("div");
     divider.className = "unread-divider";
@@ -532,7 +528,6 @@ function filterMessages() {
     if (currentServerId === "") {
       child.style.display = "flex"; 
     } else {
-      // Regla estricta: Si el mensaje no pertenece al canal que estamos viendo, se oculta completamente
       if (child.dataset.channelId === currentChannelId || child.classList.contains("unread-divider")) {
         child.style.display = "flex";
       } else {
