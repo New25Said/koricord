@@ -1,3 +1,20 @@
+/* Inyección de la fuente nativa de la App de Discord */
+@font-face {
+  font-family: 'gg sans';
+  src: url('https://abc.wtf/assets/ggsans-Normal.woff2') format('woff2');
+  font-weight: normal;
+}
+@font-face {
+  font-family: 'gg sans';
+  src: url('https://abc.wtf/assets/ggsans-Medium.woff2') format('woff2');
+  font-weight: 500;
+}
+@font-face {
+  font-family: 'gg sans';
+  src: url('https://abc.wtf/assets/ggsans-Bold.woff2') format('woff2');
+  font-weight: bold;
+}
+
 :root {
   --bg-main: #0c0d0e;
   --bg-sidebar: #111214;
@@ -15,10 +32,19 @@
 }
 
 body {
-  margin: 0; font-family: 'Segoe UI', Arial, sans-serif;
+  margin: 0; 
+  font-family: 'gg sans', 'Segoe UI', sans-serif;
   background: var(--bg-main); color: var(--text-main);
   display: flex; height: 100vh; overflow: hidden;
+  user-select: none; /* Comportamiento de App nativa */
+  -webkit-user-select: none;
 }
+
+/* Scrollbars Minimalistas estilo Discord Desktop */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #242528; }
 
 /* 🔐 LOGIN ANIMADO */
 .login-screen {
@@ -30,18 +56,20 @@ body {
   background: rgba(30, 31, 34, 0.6); backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.03); padding: 40px; border-radius: 16px;
   text-align: center; width: 320px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
-  animation: scaleUp 0.4s ease-out;
+  animation: scaleUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-@keyframes scaleUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes scaleUp { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 .login-box input {
   width: 100%; box-sizing: border-box; margin-bottom: 20px; padding: 14px;
   border-radius: 8px; border: 1px solid transparent; background: #0c0d0e; color: white; transition: 0.3s;
+  font-family: inherit;
 }
 .login-box input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 10px var(--accent-glow); }
 .login-box button {
   width: 100%; padding: 14px; border: none; border-radius: 8px;
   background: var(--accent); color: white; font-weight: bold; cursor: pointer; transition: 0.2s;
+  font-family: inherit;
 }
 .login-box button:hover { background: #4752c4; transform: translateY(-1px); }
 .error-msg { color: #f23f43; font-size: 13px; margin-top: 12px; display: none; }
@@ -61,7 +89,7 @@ body {
 }
 .guild-icon img { width: 100%; height: 100%; object-fit: cover; }
 .guild-icon-wrap:hover .guild-icon, .guild-icon-wrap.active .guild-icon {
-  border-radius: 14px; background: var(--accent); transform: scale(1.05);
+  border-radius: 14px; background: var(--accent); transform: scale(1.03);
 }
 
 .guild-tooltip {
@@ -75,7 +103,7 @@ body {
 /* CANALES */
 .sidebar { width: 240px; background: var(--bg-sidebar); display: flex; flex-direction: column; flex-shrink: 0; }
 .sidebar-header { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-.sidebar-header h2 { margin: 0; font-size: 15px; }
+.sidebar-header h2 { margin: 0; font-size: 15px; font-weight: bold; }
 .sidebar-header .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .channels-list { flex: 1; padding: 8px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
 .channel-wrap { position: relative; display: flex; align-items: center; }
@@ -85,16 +113,14 @@ body {
 }
 .channel-btn:hover { background: rgba(255,255,255,0.03); color: var(--text-main); }
 .channel-btn.active { background: rgba(255,255,255,0.07); color: var(--text-main); }
-.channel-btn::before { content: "#"; font-size: 16px; color: var(--text-muted); }
+.channel-btn::before { content: "#"; font-size: 16px; color: var(--text-muted); padding-right: 2px; }
 
-/* 🔴 BOLITAS ROJAS CON NÚMERO (Soportan texto dinámico) */
 .unread-badge {
   position: absolute; right: 8px; min-width: 16px; height: 16px; padding: 0 4px;
   box-sizing: border-box; background-color: #f23f43; border-radius: 8px; display: none; 
   box-shadow: 0 0 8px #f23f43; color: white; font-size: 11px; font-weight: bold;
   text-align: center; line-height: 16px; z-index: 5;
 }
-/* Bolita roja específica para la lista de Servidores de la izquierda */
 .guild-icon-wrap .unread-badge {
   top: -2px; right: -2px; min-width: 18px; height: 18px; line-height: 18px; border-radius: 9px;
 }
@@ -105,17 +131,16 @@ body {
   height: 48px; display: flex; align-items: center; justify-content: space-between;
   padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,0.03); flex-shrink: 0;
 }
-.header-left { display: flex; align-items: center; gap: 6px; }
+.header-left { display: flex; align-items: center; gap: 6px; font-weight: bold; font-size: 15px; }
 .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth; }
-.msg { display: flex; gap: 14px; padding: 4px 8px; border-radius: 6px; transition: background 0.15s; opacity: 0; animation: fadeInMsg 0.25s forwards ease-out; }
+.msg { display: flex; gap: 14px; padding: 4px 8px; border-radius: 6px; transition: background 0.15s; opacity: 0; animation: fadeInMsg 0.25s forwards ease-out; user-select: text; -webkit-user-select: text; }
 @keyframes fadeInMsg { to { opacity: 1; } }
-.msg:hover { background: rgba(0, 0, 0, 0.15); }
+.msg:hover { background: rgba(0, 0, 0, 0.12); }
 .avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; }
 .content { display: flex; flex-direction: column; }
 .top { display: flex; gap: 8px; align-items: baseline; }
 .name { font-weight: 500; color: #fff; font-size: 14px; }
 .time { font-size: 11px; color: var(--text-muted); }
-/* Achicado sutilmente el @username para un look balanceado */
 .username { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
 .text { color: #dbdee1; margin-top: 3px; font-size: 14.5px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
 
@@ -167,10 +192,13 @@ body {
 .popout-section-title { font-size: 10px; font-weight: bold; color: #fff; letter-spacing: 0.5px; margin-bottom: 4px; text-transform: uppercase; }
 .popout-text { font-size: 12.5px; color: #dbdee1; line-height: 1.3; max-height: 50px; overflow-y: auto; }
 
-.toggle-members-btn { background: transparent; border: 1px solid rgba(255,255,255,0.08); padding: 6px 12px; border-radius: 4px; font-size: 13px; color: var(--text-main); cursor: pointer; transition: 0.15s; }
+.toggle-members-btn { background: transparent; border: 1px solid rgba(255,255,255,0.08); padding: 6px 12px; border-radius: 4px; font-size: 13px; color: var(--text-main); cursor: pointer; transition: 0.15s; font-family: inherit; }
 .toggle-members-btn:hover { background: rgba(255,255,255,0.06); }
-.typing-indicator { padding: 0 16px; font-size: 12px; color: var(--text-muted); height: 20px; }
+
+/* Indicador de Escritura Avanzado */
+.typing-indicator { padding: 0 16px; font-size: 12px; color: var(--text-muted); height: 20px; font-weight: 500; font-family: inherit; transition: opacity 0.2s; }
+
 .input { padding: 0 16px 20px 16px; display: flex; gap: 10px; }
-input { flex: 1; padding: 12px; border: none; border-radius: 8px; background: #383a40; color: white; font-size: 14.5px; }
+input { flex: 1; padding: 12px; border: none; border-radius: 8px; background: #383a40; color: white; font-size: 14.5px; font-family: inherit; }
 input:focus { outline: none; }
-button { padding: 0 18px; border: none; border-radius: 8px; background: var(--accent); color: white; cursor: pointer; font-weight: 500; }
+button { padding: 0 18px; border: none; border-radius: 8px; background: var(--accent); color: white; cursor: pointer; font-weight: 500; font-family: inherit; }
