@@ -26,7 +26,7 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildPresences,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.DirectMessages // Asegura capturar los MDs
+    GatewayIntentBits.DirectMessages
   ]
 });
 
@@ -179,7 +179,7 @@ client.on("messageCreate", async (message) => {
   }));
 
   const msgData = {
-    nickname: message.member?.displayName || message.author.username,
+    nickname: message.guild ? (message.member?.displayName || message.author.username) : message.author.username,
     username: message.author.username,
     avatar: message.author.displayAvatarURL({ extension: "png", size: 128 }),
     text: message.content,
@@ -187,15 +187,12 @@ client.on("messageCreate", async (message) => {
     timestamp: Date.now()
   };
 
-  // REGLA DE ORO: Si no tiene guild, es un Mensaje Directo (MD)
   if (!message.guild) {
     const userId = message.author.id;
     msgData.userId = userId;
 
-    // Guardar el mensaje en el nodo específico del MD de ese usuario
     await db.ref(`dmMessages/${userId}`).push(msgData);
 
-    // Guardar o actualizar al usuario en la lista de chats privados abiertos del bot
     await db.ref(`dmChats/${userId}`).set({
       id: userId,
       username: message.author.username,
@@ -204,7 +201,6 @@ client.on("messageCreate", async (message) => {
       lastMessageTime: Date.now()
     });
   } else {
-    // Mensaje normal de servidor
     msgData.channelId = message.channel.id;
     msgData.guildId = message.guild.id;
     await db.ref("discordMessages").push(msgData);
@@ -218,13 +214,11 @@ db.ref("webMessages").on("child_added", async (snap) => {
 
   try {
     if (data.isDM && data.userId) {
-      // Enviar MD directo al usuario de Discord
       const user = await client.users.fetch(data.userId);
       if (user) {
         await user.send(data.text);
       }
     } else if (data.channelId) {
-      // Enviar a un canal de servidor regular
       const channel = await client.channels.fetch(data.channelId);
       if (channel && channel.isTextBased()) {
         await channel.send(data.text);
