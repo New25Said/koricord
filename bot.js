@@ -10,11 +10,11 @@ admin.initializeApp({
 });
 
 const db = admin.database();
-const bootTime = Date.now(); // Marca de tiempo exacta del inicio del servidor
 
 /* 🌐 WEB SERVER */
 const app = express();
 const PORT = process.env.PORT || 3000;
+
 app.use(express.static("public"));
 app.listen(PORT, () => console.log("🌐 Web activa en Render"));
 
@@ -26,7 +26,7 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildPresences,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.DirectMessages
+    GatewayIntentBits.DirectMessages // Asegura capturar los MDs
   ]
 });
 
@@ -107,7 +107,18 @@ async function syncSingleMember(member) {
     };
 
     await db.ref(`serverMembers/${member.guild.id}/${member.user.id}`).set(memberData);
-  } catch (err) {}
+  } catch (err) {
+    console.error("Error al sincronizar miembro:", err);
+  }
+}
+
+async function syncAllGuildMembers(guild) {
+  try {
+    const membersFetch = await guild.members.fetch({ withPresences: true });
+    for (const [id, member] of membersFetch) {
+      await syncSingleMember(member);
+    }
+  } catch (e) {}
 }
 
 client.once("ready", async () => {
@@ -120,12 +131,24 @@ client.once("ready", async () => {
     });
     await syncServers();
     for (const [id, guild] of client.guilds.cache) {
-      try { await guild.members.fetch({ withPresences: true }); } catch(e){}
+      await syncAllGuildMembers(guild);
     }
   } catch (err) {}
 });
 
+client.on("guildCreate", async (guild) => { await syncServers(); await syncAllGuildMembers(guild); });
+client.on("guildDelete", syncServers);
+client.on("guildUpdate", syncServers);
+client.on("channelCreate", syncServers);
+client.on("channelDelete", syncServers);
+client.on("channelUpdate", syncServers);
+
 client.on("presenceUpdate", (oldP, newP) => { if (newP?.member) syncSingleMember(newP.member); });
+client.on("guildMemberAdd", syncSingleMember);
+client.on("guildMemberUpdate", syncSingleMember);
+client.on("guildMemberRemove", async (member) => {
+  await db.ref(`serverMembers/${member.guild.id}/${member.user.id}`).remove();
+});
 
 client.on("typingStart", (typing) => {
   if (typing.user.bot) return;
@@ -134,6 +157,7 @@ client.on("typingStart", (typing) => {
     user: typing.member?.displayName || typing.user.username,
     timestamp: Date.now()
   });
+
   setTimeout(() => {
     db.ref(`typingStatus/${typing.channel.id}`).transaction((current) => {
       if (current && Date.now() - current.timestamp >= 4000) {
@@ -155,7 +179,7 @@ client.on("messageCreate", async (message) => {
   }));
 
   const msgData = {
-    nickname: message.guild ? (message.member?.displayName || message.author.username) : message.author.username,
+    nickname: message.member?.displayName || message.author.username,
     username: message.author.username,
     avatar: message.author.displayAvatarURL({ extension: "png", size: 128 }),
     text: message.content,
@@ -163,12 +187,15 @@ client.on("messageCreate", async (message) => {
     timestamp: Date.now()
   };
 
+  // REGLA DE ORO: Si no tiene guild, es un Mensaje Directo (MD)
   if (!message.guild) {
     const userId = message.author.id;
     msgData.userId = userId;
-    msgData.channelId = userId; // Unificar propiedad identificadora
 
+    // Guardar el mensaje en el nodo específico del MD de ese usuario
     await db.ref(`dmMessages/${userId}`).push(msgData);
+
+    // Guardar o actualizar al usuario en la lista de chats privados abiertos del bot
     await db.ref(`dmChats/${userId}`).set({
       id: userId,
       username: message.author.username,
@@ -177,28 +204,35 @@ client.on("messageCreate", async (message) => {
       lastMessageTime: Date.now()
     });
   } else {
+    // Mensaje normal de servidor
     msgData.channelId = message.channel.id;
     msgData.guildId = message.guild.id;
-    // Indexar los mensajes organizados por canal para evitar colapsos visuales en el Front
-    await db.ref(`serverChannelMessages/${message.channel.id}`).push(msgData);
+    await db.ref("discordMessages").push(msgData);
   }
 });
 
 /* 🌐 WEB → DISCORD */
 db.ref("webMessages").on("child_added", async (snap) => {
   const data = snap.val();
-  // REGLA DE ORO: Si el mensaje fue guardado antes de encender el servidor actual, ignorarlo por completo
-  if (!data?.text || (data.time && data.time < bootTime)) return;
+  if (!data?.text) return;
 
   try {
     if (data.isDM && data.userId) {
+      // Enviar MD directo al usuario de Discord
       const user = await client.users.fetch(data.userId);
-      if (user) await user.send(data.text);
+      if (user) {
+        await user.send(data.text);
+      }
     } else if (data.channelId) {
+      // Enviar a un canal de servidor regular
       const channel = await client.channels.fetch(data.channelId);
-      if (channel && channel.isTextBased()) await channel.send(data.text);
+      if (channel && channel.isTextBased()) {
+        await channel.send(data.text);
+      }
     }
-  } catch (err) {}
+  } catch (err) {
+    console.error("Error al despachar mensaje desde la Web:", err);
+  }
 });
 
 client.login(process.env.DISCORD_TOKEN);
