@@ -95,12 +95,15 @@ function initApp() {
     renderServers();
   });
 
+  // 3. Sistema de Escritura Avanzado Escuchando Todos los Canales
   onValue(ref(db, "typing status"), (snap) => {
     const data = snap.val();
     if (data && data.isTyping && data.user !== "WebUser" && data.channelId === currentChannelId) {
       document.getElementById("typing").innerText = `${data.user} está escribiendo...`;
+      document.getElementById("typing").style.opacity = "1";
     } else {
       document.getElementById("typing").innerText = "";
+      document.getElementById("typing").style.opacity = "0";
     }
   });
 
@@ -200,10 +203,14 @@ function selectServer(serverId) {
     });
   }
 
+  // Cargar miembros del servidor seleccionado
   onValue(ref(db, `serverMembers/${currentServerId}`), (snap) => {
     renderMembers(snap.val());
   });
 }
+
+// Variable para guardar el perfil de Kori en memoria y mapearlo en sus mensajes enviados
+let cachedKoriProfile = null;
 
 function renderMembers(members) {
   const container = document.getElementById("membersList");
@@ -211,6 +218,11 @@ function renderMembers(members) {
   if (!members) return;
 
   Object.values(members).forEach(m => {
+    // Si este miembro coincide con el ID del Bot, asumimos que es el perfil real de Kori
+    if (m.id === botId) {
+      cachedKoriProfile = m;
+    }
+
     const item = document.createElement("div");
     item.className = "member-item";
 
@@ -284,7 +296,6 @@ function processMessage(data, type) {
   const targetChannelId = data.channelId || currentChannelId;
   const targetGuildId = data.guildId || "";
   
-  // Las alertas de sonido y globos solo se disparan si NO es un mensaje propio enviado desde la web
   if (type !== "web" && (targetChannelId !== currentChannelId || !isWindowFocused)) {
     playNotificationSound();
     
@@ -326,19 +337,15 @@ function processMessage(data, type) {
   const msgTime = data.timestamp || data.time;
   div.dataset.time = msgTime;
   div.dataset.channelId = targetChannelId;
-  const timeStr = new Date(msgTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
   let nameToShow = data.nickname || data.username;
   let avatarUrl = data.avatar;
 
-  // Lógica unificada para obtener tu perfil real de Kori si estás en la web
+  // Lógica de perfil corregida: Mapea tu foto real de Discord usando el cache en vivo de los miembros
   if (type === "web" || data.authorId === botId || data.username === "WebUser") {
-    const currentServerMembers = serversData[currentServerId]?.members || {};
-    // Buscar perfil de Kori en los miembros sincronizados usando el botId
-    const myDiscordProfile = Object.values(currentServerMembers).find(m => m.id === botId);
-    if (myDiscordProfile) {
-      nameToShow = myDiscordProfile.nickname || myDiscordProfile.username;
-      avatarUrl = myDiscordProfile.avatar;
+    if (cachedKoriProfile) {
+      nameToShow = cachedKoriProfile.nickname || cachedKoriProfile.username;
+      avatarUrl = cachedKoriProfile.avatar;
     } else {
       nameToShow = nameToShow || "Kori";
     }
@@ -347,6 +354,8 @@ function processMessage(data, type) {
   const avatarHtml = (avatarUrl && avatarUrl.startsWith('http')) 
     ? `<img class="avatar" src="${avatarUrl}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'avatar\\'>${nameToShow[0]}</div>';">`
     : `<div class="avatar">${nameToShow ? nameToShow[0].toUpperCase() : "K"}</div>`;
+
+  const timeStr = new Date(msgTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
   div.innerHTML = `
     ${avatarHtml}
@@ -390,7 +399,6 @@ window.sendMessage = async function(){
   set(ref(db, "typing status"), { isTyping: false, user: "", channelId: "" });
   clearUnreadDividers();
 
-  // Guardamos con la misma estructura (channelId y guildId activos) para que pase el display filter
   await push(ref(db,"webMessages"), {
     text: text,
     time: Date.now(),
