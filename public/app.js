@@ -29,9 +29,9 @@ let isWindowFocused = true;
 let unreadCount = 0;
 let lastMessageDividerAdded = false;
 
-// Almacén local de conteo de no leídos por canal y por servidor
-let channelUnreads = {};
-let serverUnreads = {};
+// Mapas para almacenar contadores numéricos acumulados por canal y por servidor
+let channelUnreadCounts = {};
+let serverUnreadCounts = {};
 
 const popout = document.createElement("div");
 popout.className = "profile-popout";
@@ -94,7 +94,6 @@ function initApp() {
   onValue(ref(db, "serverConfig"), (snap) => {
     serversData = snap.val() || {};
     renderServers();
-    updateBadgesVisibility();
   });
 
   onValue(ref(db, "typing status"), (snap) => {
@@ -125,21 +124,27 @@ function renderServers() {
   Object.values(serversData).forEach((srv, idx) => {
     const wrap = document.createElement("div");
     wrap.className = `guild-icon-wrap ${currentServerId === srv.id || (!currentServerId && idx === 0) ? 'active' : ''}`;
-    wrap.id = `guild-${srv.id}`;
+    wrap.id = `server-wrap-${srv.id}`;
     
     const iconHtml = srv.icon 
       ? `<img src="${srv.icon}">` 
       : `<div>${srv.name[0].toUpperCase()}</div>`;
 
-    const badge = document.createElement("div");
-    badge.className = "unread-badge";
-    badge.id = `sbadge-${srv.id}`;
+    const serverBadge = document.createElement("div");
+    serverBadge.className = "unread-badge";
+    serverBadge.id = `server-badge-${srv.id}`;
 
     wrap.innerHTML = `
       <div class="guild-icon">${iconHtml}</div>
       <span class="guild-tooltip">${srv.name}</span>
     `;
-    wrap.appendChild(badge);
+    wrap.appendChild(serverBadge);
+
+    // Si hay un contador numérico previo activo para este servidor, renderizarlo de inmediato
+    if (serverUnreadCounts[srv.id] && serverUnreadCounts[srv.id] > 0 && currentServerId !== srv.id) {
+      serverBadge.innerText = serverUnreadCounts[srv.id];
+      serverBadge.style.display = "block";
+    }
 
     if (!currentServerId && idx === 0) {
       selectServer(srv.id);
@@ -161,9 +166,11 @@ function selectServer(serverId) {
 
   document.getElementById("serverTitle").innerText = srv.name;
   
-  // Limpiar unreads acumulados del servidor al hacer click en él
-  serverUnreads[serverId] = 0;
-  
+  // Limpiar el contador del servidor al que acabamos de entrar
+  serverUnreadCounts[serverId] = 0;
+  const srvBadge = document.getElementById(`server-badge-${serverId}`);
+  if (srvBadge) srvBadge.style.display = "none";
+
   const channelsList = document.getElementById("channelsList");
   channelsList.innerHTML = "";
   currentChannelId = "";
@@ -185,6 +192,12 @@ function selectServer(serverId) {
         switchChannel(ch.id, ch.name);
       }
 
+      // Si tiene mensajes acumulados no leídos guardados, inyectarle el número
+      if (channelUnreadCounts[ch.id] && channelUnreadCounts[ch.id] > 0 && currentChannelId !== ch.id) {
+        badge.innerText = channelUnreadCounts[ch.id];
+        badge.style.display = "block";
+      }
+
       btn.onclick = () => switchChannel(ch.id, ch.name);
       wrap.appendChild(btn); wrap.appendChild(badge);
       channelsList.appendChild(wrap);
@@ -194,8 +207,6 @@ function selectServer(serverId) {
   onValue(ref(db, `serverMembers/${currentServerId}`), (snap) => {
     renderMembers(snap.val());
   });
-  
-  updateBadgesVisibility();
 }
 
 function renderMembers(members) {
@@ -262,68 +273,49 @@ function switchChannel(id, name) {
     else btn.classList.remove("active");
   });
 
-  // Limpiar conteo del canal actual
-  channelUnreads[id] = 0;
+  // Resetear contadores al entrar a un canal
+  channelUnreadCounts[id] = 0;
+  const badge = document.getElementById(`badge-${id}`);
+  if (badge) badge.style.display = "none";
 
   lastMessageDividerAdded = false;
   clearUnreadDividers();
-  updateBadgesVisibility();
   filterMessages();
 }
 
 function clearUnreadDividers() { document.querySelectorAll(".unread-divider").forEach(d => d.remove()); }
 
-function updateBadgesVisibility() {
-  // Actualizar globos de canales visibles
-  Object.keys(channelUnreads).forEach(chId => {
-    const badge = document.getElementById(`badge-${chId}`);
-    if (badge) {
-      if (channelUnreads[chId] > 0 && chId !== currentChannelId) {
-        badge.innerText = channelUnreads[chId];
-        badge.style.display = "flex";
-      } else {
-        badge.style.display = "none";
-      }
-    }
-  });
-
-  // Actualizar globos de servidores
-  Object.keys(serverUnreads).forEach(srvId => {
-    const sbadge = document.getElementById(`sbadge-${srvId}`);
-    if (sbadge) {
-      if (serverUnreads[srvId] > 0 && srvId !== currentServerId) {
-        sbadge.innerText = serverUnreads[srvId];
-        sbadge.style.display = "flex";
-      } else {
-        sbadge.style.display = "none";
-      }
-    }
-  });
-}
-
 function processMessage(data, type) {
   const targetChannelId = data.channelId || currentChannelId;
-  const targetGuildId = data.guildId || currentServerId;
+  const targetGuildId = data.guildId || "";
   
   if (targetChannelId !== currentChannelId || !isWindowFocused) {
     playNotificationSound();
     
-    // Sumar mensaje no leído al canal correspondiente
+    // Incrementar e inyectar contador numérico en el canal si no estás parado en él
     if (targetChannelId !== currentChannelId) {
-      channelUnreads[targetChannelId] = (channelUnreads[targetChannelId] || 0) + 1;
+      channelUnreadCounts[targetChannelId] = (channelUnreadCounts[targetChannelId] || 0) + 1;
+      const badge = document.getElementById(`badge-${targetChannelId}`);
+      if (badge) {
+        badge.innerText = channelUnreadCounts[targetChannelId];
+        badge.style.display = "block";
+      }
     }
 
-    // Sumar mensaje no leído al servidor correspondiente si no estás en él
+    // Incrementar e inyectar contador numérico en la bolita roja del Servidor de la izquierda
     if (targetGuildId && targetGuildId !== currentServerId) {
-      serverUnreads[targetGuildId] = (serverUnreads[targetGuildId] || 0) + 1;
+      serverUnreadCounts[targetGuildId] = (serverUnreadCounts[targetGuildId] || 0) + 1;
+      const srvBadge = document.getElementById(`server-badge-${targetGuildId}`);
+      if (srvBadge) {
+        srvBadge.innerText = serverUnreadCounts[targetGuildId];
+        srvBadge.style.display = "block";
+      }
     }
 
     if (!isWindowFocused) {
       unreadCount++;
       document.title = `🔴 (${unreadCount}) KoriCord Futurist`;
     }
-    
-    updateBadgesVisibility();
   }
 
   if (!isWindowFocused && targetChannelId === currentChannelId && !lastMessageDividerAdded) {
@@ -351,6 +343,9 @@ function processMessage(data, type) {
     if (myDiscordProfile) {
       nameToShow = myDiscordProfile.nickname;
       avatarUrl = myDiscordProfile.avatar;
+    } else {
+      nameToShow = botName;
+      avatarUrl = botAvatar;
     }
   }
 
