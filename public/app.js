@@ -23,8 +23,8 @@ const db = getDatabase(app);
 
 let botId = "";
 let serversData = {};
-let currentServerId = ""; // Si está vacío "", significa que estamos viendo los MDs
-let currentChannelId = ""; // Guarda la ID de canal de servidor u ID de usuario si es MD
+let currentServerId = ""; 
+let currentChannelId = ""; 
 let isWindowFocused = true;
 let unreadCount = 0;
 let lastMessageDividerAdded = false;
@@ -99,11 +99,9 @@ function initApp() {
     renderServers();
   });
 
-  // Escuchar Mensajes Normales (Servidores)
   onChildAdded(ref(db, "discordMessages"), (snap) => { processMessage(snap.val(), "discord"); });
   onChildAdded(ref(db, "webMessages"), (snap) => { processMessage(snap.val(), "web"); });
   
-  // Seleccionar la vista de MDs por defecto al iniciar
   selectDMHome();
 }
 
@@ -142,7 +140,6 @@ function renderServers() {
   });
 }
 
-// Cambiar la interfaz para el Modo Mensajes Directos (Estilo Home Discord)
 window.selectDMHome = function() {
   currentServerId = "";
   document.querySelectorAll(".guild-icon-wrap").forEach(w => w.classList.remove("active"));
@@ -154,7 +151,13 @@ window.selectDMHome = function() {
   document.getElementById("membersToggleBtn").style.display = "none";
   document.getElementById("membersSidebar").classList.add("hidden");
 
-  // Escuchar la lista de chats privados abiertos en Firebase
+  // Cirugía: Limpiar el chat por completo para que no queden remanentes del servidor anterior
+  document.getElementById("messages").innerHTML = "";
+  currentChannelId = "";
+  document.getElementById("currentChannelName").innerText = "selecciona-un-chat";
+
+  if (currentDmMessageListener) { currentDmMessageListener(); currentDmMessageListener = null; }
+
   onValue(ref(db, "dmChats"), (snap) => {
     const chats = snap.val() || {};
     renderDmChatsList(chats);
@@ -220,11 +223,9 @@ function switchDmUser(userId, name) {
   lastMessageDividerAdded = false;
   clearUnreadDividers();
   
-  // Limpiar chat anterior e inyectar el historial exclusivo de este MD
   document.getElementById("messages").innerHTML = "";
   if (currentDmMessageListener) currentDmMessageListener();
 
-  // Escuchar mensajes entrantes exclusivos de este MD indexado
   currentDmMessageListener = onValue(ref(db, `dmMessages/${userId}`), (snap) => {
     document.getElementById("messages").innerHTML = "";
     const msgs = snap.val();
@@ -235,7 +236,6 @@ function switchDmUser(userId, name) {
     }
   });
 
-  // Escucha del indicador de escritura para este MD privado
   if (currentTypingListener) currentTypingListener();
   currentTypingListener = onValue(ref(db, `typingStatus/${currentChannelId}`), (snap) => {
     const data = snap.val();
@@ -259,13 +259,18 @@ function selectServer(serverId) {
   document.getElementById("chatHeaderPrefix").innerText = "#";
   document.getElementById("membersToggleBtn").style.display = "block";
 
+  // Cirugía: Limpiar el DOM al cambiar de servidor para obligar a re-filtrar todo limpiamente
+  document.getElementById("messages").innerHTML = "";
+  currentChannelId = "";
+
+  if (currentDmMessageListener) { currentDmMessageListener(); currentDmMessageListener = null; }
+
   serverUnreadCounts[serverId] = 0;
   const srvBadge = document.getElementById(`server-badge-${serverId}`);
   if (srvBadge) srvBadge.style.display = "none";
 
   const channelsList = document.getElementById("channelsList");
   channelsList.innerHTML = "";
-  currentChannelId = "";
 
   if (srv.channels && srv.channels.length > 0) {
     srv.channels.forEach((ch, idx) => {
@@ -391,8 +396,6 @@ function switchChannel(id, name) {
 
   lastMessageDividerAdded = false;
   clearUnreadDividers();
-  
-  document.getElementById("messages").innerHTML = "";
   filterMessages();
 
   if (currentTypingListener) currentTypingListener();
@@ -416,12 +419,10 @@ function processMessage(data, type) {
   const targetGuildId = data.guildId || "";
   const isMessageDM = data.userId ? true : false;
   
-  // Despachar alertas si el mensaje no se originó en la vista web activa
   if (type !== "web" && data.username !== "WebUser" && (isMessageDM ? currentServerId !== "" || currentChannelId !== data.userId : targetChannelId !== currentChannelId || !isWindowFocused)) {
     playNotificationSound();
     
     if (isMessageDM) {
-      // Incrementar globo rojo numérico del MD
       dmUnreadCounts[data.userId] = (dmUnreadCounts[data.userId] || 0) + 1;
       const badge = document.getElementById(`badge-dm-${data.userId}`);
       if (badge) {
@@ -429,7 +430,6 @@ function processMessage(data, type) {
         badge.style.display = "block";
       }
     } else {
-      // Servidores normales
       if (targetChannelId !== currentChannelId) {
         channelUnreadCounts[targetChannelId] = (channelUnreadCounts[targetChannelId] || 0) + 1;
         const badge = document.getElementById(`badge-${targetChannelId}`);
@@ -454,19 +454,9 @@ function processMessage(data, type) {
     }
   }
 
-  // Filtrar para no duplicar en la vista de servidores si el mensaje pertenece a un MD
+  // Cirugía de Visualización: Filtramos de inmediato si el mensaje no pertenece al entorno activo antes de inyectar al DOM
   if (!isMessageDM && currentServerId === "") return;
   if (isMessageDM && currentServerId !== "") return;
-  if (isMessageDM && data.userId !== currentChannelId) return;
-
-  if (!isWindowFocused && !lastMessageDividerAdded) {
-    const divider = document.createElement("div");
-    divider.className = "unread-divider";
-    divider.innerHTML = "<span>NUEVOS MENSAJES</span>";
-    divider.dataset.time = (data.timestamp || data.time) - 1;
-    document.getElementById("messages").appendChild(divider);
-    lastMessageDividerAdded = true;
-  }
 
   const div = document.createElement("div");
   div.className = "msg";
@@ -516,6 +506,16 @@ function processMessage(data, type) {
     </div>
   `;
 
+  // Alerta de Línea Roja condicional
+  if (!isWindowFocused && targetChannelId === currentChannelId && !lastMessageDividerAdded) {
+    const divider = document.createElement("div");
+    divider.className = "unread-divider";
+    divider.innerHTML = "<span>NUEVOS MENSAJES</span>";
+    divider.dataset.time = msgTime - 1;
+    document.getElementById("messages").appendChild(divider);
+    lastMessageDividerAdded = true;
+  }
+
   const container = document.getElementById("messages");
   const children = Array.from(container.children);
   const nextSibling = children.find(child => parseInt(child.dataset.time) > msgTime);
@@ -530,9 +530,10 @@ function filterMessages() {
   const container = document.getElementById("messages");
   for (let child of container.children) {
     if (currentServerId === "") {
-      child.style.display = "flex"; // Los DMs se limpian reactivamente por evento onValue
+      child.style.display = "flex"; 
     } else {
-      if (!child.dataset.channelId || child.dataset.channelId === currentChannelId) {
+      // Regla estricta: Si el mensaje no pertenece al canal que estamos viendo, se oculta completamente
+      if (child.dataset.channelId === currentChannelId || child.classList.contains("unread-divider")) {
         child.style.display = "flex";
       } else {
         child.style.display = "none";
@@ -555,15 +556,11 @@ window.sendMessage = async function(){
   };
 
   if (currentServerId === "") {
-    // Si estamos en la sección de MDs, armar la carga para chat privado
     payload.isDM = true;
     payload.userId = currentChannelId;
-    
-    // Auto-inyectar el mensaje local en tu propio nodo privado de Firebase para verlo al instante
     await push(ref(db, `dmMessages/${currentChannelId}`), payload);
   }
 
-  // Despachar globalmente para que el bot de Node.js lo mande a Discord
   payload.channelId = currentChannelId;
   payload.guildId = currentServerId;
   await push(ref(db,"webMessages"), payload);
