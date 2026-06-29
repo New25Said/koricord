@@ -29,7 +29,6 @@ let isWindowFocused = true;
 let unreadCount = 0;
 let lastMessageDividerAdded = false;
 
-// Mapas para almacenar contadores numéricos acumulados por canal y por servidor
 let channelUnreadCounts = {};
 let serverUnreadCounts = {};
 
@@ -140,7 +139,6 @@ function renderServers() {
     `;
     wrap.appendChild(serverBadge);
 
-    // Si hay un contador numérico previo activo para este servidor, renderizarlo de inmediato
     if (serverUnreadCounts[srv.id] && serverUnreadCounts[srv.id] > 0 && currentServerId !== srv.id) {
       serverBadge.innerText = serverUnreadCounts[srv.id];
       serverBadge.style.display = "block";
@@ -166,7 +164,6 @@ function selectServer(serverId) {
 
   document.getElementById("serverTitle").innerText = srv.name;
   
-  // Limpiar el contador del servidor al que acabamos de entrar
   serverUnreadCounts[serverId] = 0;
   const srvBadge = document.getElementById(`server-badge-${serverId}`);
   if (srvBadge) srvBadge.style.display = "none";
@@ -192,7 +189,6 @@ function selectServer(serverId) {
         switchChannel(ch.id, ch.name);
       }
 
-      // Si tiene mensajes acumulados no leídos guardados, inyectarle el número
       if (channelUnreadCounts[ch.id] && channelUnreadCounts[ch.id] > 0 && currentChannelId !== ch.id) {
         badge.innerText = channelUnreadCounts[ch.id];
         badge.style.display = "block";
@@ -273,7 +269,6 @@ function switchChannel(id, name) {
     else btn.classList.remove("active");
   });
 
-  // Resetear contadores al entrar a un canal
   channelUnreadCounts[id] = 0;
   const badge = document.getElementById(`badge-${id}`);
   if (badge) badge.style.display = "none";
@@ -289,10 +284,10 @@ function processMessage(data, type) {
   const targetChannelId = data.channelId || currentChannelId;
   const targetGuildId = data.guildId || "";
   
-  if (targetChannelId !== currentChannelId || !isWindowFocused) {
+  // Las alertas de sonido y globos solo se disparan si NO es un mensaje propio enviado desde la web
+  if (type !== "web" && (targetChannelId !== currentChannelId || !isWindowFocused)) {
     playNotificationSound();
     
-    // Incrementar e inyectar contador numérico en el canal si no estás parado en él
     if (targetChannelId !== currentChannelId) {
       channelUnreadCounts[targetChannelId] = (channelUnreadCounts[targetChannelId] || 0) + 1;
       const badge = document.getElementById(`badge-${targetChannelId}`);
@@ -302,7 +297,6 @@ function processMessage(data, type) {
       }
     }
 
-    // Incrementar e inyectar contador numérico en la bolita roja del Servidor de la izquierda
     if (targetGuildId && targetGuildId !== currentServerId) {
       serverUnreadCounts[targetGuildId] = (serverUnreadCounts[targetGuildId] || 0) + 1;
       const srvBadge = document.getElementById(`server-badge-${targetGuildId}`);
@@ -318,7 +312,7 @@ function processMessage(data, type) {
     }
   }
 
-  if (!isWindowFocused && targetChannelId === currentChannelId && !lastMessageDividerAdded) {
+  if (type !== "web" && !isWindowFocused && targetChannelId === currentChannelId && !lastMessageDividerAdded) {
     const divider = document.createElement("div");
     divider.className = "unread-divider";
     divider.innerHTML = "<span>NUEVOS MENSAJES</span>";
@@ -337,21 +331,22 @@ function processMessage(data, type) {
   let nameToShow = data.nickname || data.username;
   let avatarUrl = data.avatar;
 
-  if (type === "web" || data.authorId === botId) {
-    const containerMembers = serversData[currentServerId]?.members || {};
-    const myDiscordProfile = Object.values(containerMembers).find(m => m.id === botId);
+  // Lógica unificada para obtener tu perfil real de Kori si estás en la web
+  if (type === "web" || data.authorId === botId || data.username === "WebUser") {
+    const currentServerMembers = serversData[currentServerId]?.members || {};
+    // Buscar perfil de Kori en los miembros sincronizados usando el botId
+    const myDiscordProfile = Object.values(currentServerMembers).find(m => m.id === botId);
     if (myDiscordProfile) {
-      nameToShow = myDiscordProfile.nickname;
+      nameToShow = myDiscordProfile.nickname || myDiscordProfile.username;
       avatarUrl = myDiscordProfile.avatar;
     } else {
-      nameToShow = botName;
-      avatarUrl = botAvatar;
+      nameToShow = nameToShow || "Kori";
     }
   }
 
   const avatarHtml = (avatarUrl && avatarUrl.startsWith('http')) 
     ? `<img class="avatar" src="${avatarUrl}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'avatar\\'>${nameToShow[0]}</div>';">`
-    : `<div class="avatar">${nameToShow[0].toUpperCase()}</div>`;
+    : `<div class="avatar">${nameToShow ? nameToShow[0].toUpperCase() : "K"}</div>`;
 
   div.innerHTML = `
     ${avatarHtml}
@@ -360,7 +355,7 @@ function processMessage(data, type) {
         <span class="name">${nameToShow}</span>
         <span class="time">${timeStr}</span>
       </div>
-      ${data.username ? `<div class="username">@${data.username}</div>` : ''}
+      ${data.username && data.username !== "WebUser" ? `<div class="username">@${data.username}</div>` : ''}
       <div class="text">${data.text}</div>
     </div>
   `;
@@ -395,10 +390,14 @@ window.sendMessage = async function(){
   set(ref(db, "typing status"), { isTyping: false, user: "", channelId: "" });
   clearUnreadDividers();
 
+  // Guardamos con la misma estructura (channelId y guildId activos) para que pase el display filter
   await push(ref(db,"webMessages"), {
     text: text,
     time: Date.now(),
-    channelId: currentChannelId
+    username: "WebUser",
+    nickname: "Kori",
+    channelId: currentChannelId,
+    guildId: currentServerId
   });
 
   document.getElementById("msg").value="";
