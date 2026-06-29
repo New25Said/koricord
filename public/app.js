@@ -15,7 +15,7 @@ const firebaseConfig = {
   projectId: "koricord-a5f4e",
   storageBucket: "koricord-a5f4e.firebasestorage.app",
   messagingSenderId: "228519016518",
-  appId: "1:128519016518:web:9062449c2b5135ee36b247"
+  appId: "1:228519016518:web:9062449c2b5135ee36b247"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -37,7 +37,6 @@ const popout = document.createElement("div");
 popout.className = "profile-popout";
 document.body.appendChild(popout);
 
-// Borrar la línea roja al hacer CLICK en cualquier parte de la pantalla
 document.addEventListener("click", (e) => {
   if (!popout.contains(e.target) && !e.target.closest(".member-item")) {
     popout.style.display = "none";
@@ -111,10 +110,7 @@ function renderServers() {
     wrap.className = `guild-icon-wrap ${currentServerId === srv.id || (!currentServerId && idx === 0) ? 'active' : ''}`;
     wrap.id = `server-wrap-${srv.id}`;
     
-    const iconHtml = srv.icon 
-      ? `<img src="${srv.icon}">` 
-      : `<div>${srv.name[0].toUpperCase()}</div>`;
-
+    const iconHtml = srv.icon ? `<img src="${srv.icon}">` : `<div>${srv.name[0].toUpperCase()}</div>`;
     const serverBadge = document.createElement("div");
     serverBadge.className = "unread-badge";
     serverBadge.id = `server-badge-${srv.id}`;
@@ -130,9 +126,7 @@ function renderServers() {
       serverBadge.style.display = "block";
     }
 
-    if (!currentServerId && idx === 0) {
-      selectServer(srv.id);
-    }
+    if (!currentServerId && idx === 0) selectServer(srv.id);
 
     wrap.onclick = () => {
       document.querySelectorAll(".guild-icon-wrap").forEach(w => w.classList.remove("active"));
@@ -149,7 +143,6 @@ function selectServer(serverId) {
   if (!srv) return;
 
   document.getElementById("serverTitle").innerText = srv.name;
-  
   serverUnreadCounts[serverId] = 0;
   const srvBadge = document.getElementById(`server-badge-${serverId}`);
   if (srvBadge) srvBadge.style.display = "none";
@@ -171,9 +164,7 @@ function selectServer(serverId) {
       badge.className = "unread-badge";
       badge.id = `badge-${ch.id}`;
 
-      if (idx === 0) {
-        switchChannel(ch.id, ch.name);
-      }
+      if (idx === 0) switchChannel(ch.id, ch.name);
 
       if (channelUnreadCounts[ch.id] && channelUnreadCounts[ch.id] > 0 && currentChannelId !== ch.id) {
         badge.innerText = channelUnreadCounts[ch.id];
@@ -199,9 +190,7 @@ function renderMembers(members) {
   if (!members) return;
 
   Object.values(members).forEach(m => {
-    if (m.id === botId) {
-      cachedKoriProfile = m;
-    }
+    if (m.id === botId) cachedKoriProfile = m;
 
     const item = document.createElement("div");
     item.className = "member-item";
@@ -229,8 +218,25 @@ function renderMembers(members) {
     item.onclick = (e) => {
       e.stopPropagation();
       const rect = item.getBoundingClientRect();
-      popout.style.top = `${Math.min(rect.top - 10, window.innerHeight - 240)}px`;
+      popout.style.top = `${Math.min(rect.top - 10, window.innerHeight - 260)}px`;
       
+      let spotifyHtml = "";
+      if (m.spotify) {
+        const coverImg = m.spotify.image ? `<img class="spotify-img" src="${m.spotify.image}">` : `<div class="spotify-img">🎵</div>`;
+        spotifyHtml = `
+          <div>
+            <div class="popout-section-title" style="color: var(--spotify);">Escuchando Spotify</div>
+            <div class="popout-spotify-box">
+              ${coverImg}
+              <div class="spotify-info">
+                <div class="spotify-song">${m.spotify.song}</div>
+                <div class="spotify-artist">de ${m.spotify.artist}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
       popout.innerHTML = `
         <div class="popout-banner" style="background-color: ${m.bannerColor || '#5865f2'};"></div>
         <div class="popout-avatar-wrap">
@@ -242,7 +248,8 @@ function renderMembers(members) {
             <div class="popout-user">@${m.username}</div>
           </div>
           ${m.customStatus ? `<div><div class="popout-section-title">Estado</div><div class="popout-text">${m.customStatus}</div></div>` : ''}
-          ${m.activity ? `<div><div class="popout-section-title">Actividad</div><div class="popout-text">${m.activity}</div></div>` : ''}
+          ${spotifyHtml}
+          ${m.activity && !m.spotify ? `<div><div class="popout-section-title">Actividad</div><div class="popout-text">${m.activity}</div></div>` : ''}
         </div>
       `;
       popout.style.display = "flex";
@@ -269,7 +276,6 @@ function switchChannel(id, name) {
   clearUnreadDividers();
   filterMessages();
 
-  // Escuchar el Typing Status de Discord exclusivo de este canal sin interferencias locales
   if (currentTypingListener) currentTypingListener();
   
   currentTypingListener = onValue(ref(db, `typingStatus/${currentChannelId}`), (snap) => {
@@ -293,7 +299,6 @@ function processMessage(data, type) {
   
   if (type !== "web" && (targetChannelId !== currentChannelId || !isWindowFocused)) {
     playNotificationSound();
-    
     if (targetChannelId !== currentChannelId) {
       channelUnreadCounts[targetChannelId] = (channelUnreadCounts[targetChannelId] || 0) + 1;
       const badge = document.getElementById(`badge-${targetChannelId}`);
@@ -318,7 +323,6 @@ function processMessage(data, type) {
     }
   }
 
-  // REGLA DE ORO: Si estás en otra página fuera de la app y llega un mensaje al chat activo, sale la línea roja
   if (!isWindowFocused && targetChannelId === currentChannelId && !lastMessageDividerAdded) {
     const divider = document.createElement("div");
     divider.className = "unread-divider";
@@ -352,7 +356,6 @@ function processMessage(data, type) {
 
   const timeStr = new Date(msgTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
-  // Renderizar texto e incrustar archivos adjuntos si existen (Imágenes y Videos)
   let attachmentsHtml = "";
   if (data.attachments && data.attachments.length > 0) {
     data.attachments.forEach(file => {
@@ -402,7 +405,6 @@ function filterMessages() {
 window.sendMessage = async function(){
   const text = document.getElementById("msg").value;
   if(!text) return;
-
   clearUnreadDividers();
 
   await push(ref(db,"webMessages"), {
