@@ -15,7 +15,7 @@ const firebaseConfig = {
   projectId: "koricord-a5f4e",
   storageBucket: "koricord-a5f4e.firebasestorage.app",
   messagingSenderId: "228519016518",
-  appId: "1:228519016518:web:9062449c2b5135ee36b247"
+  appId: "1:128519016518:web:9062449c2b5135ee36b247"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -31,12 +31,13 @@ let lastMessageDividerAdded = false;
 
 let channelUnreadCounts = {};
 let serverUnreadCounts = {};
+let currentTypingListener = null;
 
 const popout = document.createElement("div");
 popout.className = "profile-popout";
 document.body.appendChild(popout);
 
-// Click en cualquier lado quita la tarjeta de perfil y elimina las líneas rojas
+// Borrar la línea roja al hacer CLICK en cualquier parte de la pantalla
 document.addEventListener("click", (e) => {
   if (!popout.contains(e.target) && !e.target.closest(".member-item")) {
     popout.style.display = "none";
@@ -95,26 +96,6 @@ function initApp() {
   onValue(ref(db, "serverConfig"), (snap) => {
     serversData = snap.val() || {};
     renderServers();
-  });
-
-  // Escuchador de escritura en tiempo real corregido
-  onValue(ref(db, "typing status"), (snap) => {
-    const data = snap.val();
-    const indicator = document.getElementById("typing");
-    if (data && data.isTyping && data.user !== "WebUser" && data.channelId === currentChannelId) {
-      indicator.innerText = `${data.user} está escribiendo...`;
-      indicator.style.opacity = "1";
-    } else {
-      indicator.style.opacity = "0";
-    }
-  });
-
-  document.getElementById("msg").addEventListener("input", () => {
-    set(ref(db, "typing status"), { isTyping: true, user: "WebUser", channelId: currentChannelId });
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      set(ref(db, "typing status"), { isTyping: false, user: "", channelId: "" });
-    }, 2000);
   });
 
   onChildAdded(ref(db, "discordMessages"), (snap) => { processMessage(snap.val(), "discord"); });
@@ -287,29 +268,24 @@ function switchChannel(id, name) {
   lastMessageDividerAdded = false;
   clearUnreadDividers();
   filterMessages();
+
+  // Escuchar el Typing Status de Discord exclusivo de este canal sin interferencias locales
+  if (currentTypingListener) currentTypingListener();
+  
+  currentTypingListener = onValue(ref(db, `typingStatus/${currentChannelId}`), (snap) => {
+    const data = snap.val();
+    const indicator = document.getElementById("typing");
+    if (data && data.isTyping && data.user !== cachedKoriProfile?.nickname) {
+      indicator.innerText = `${data.user} está escribiendo...`;
+      indicator.style.opacity = "1";
+    } else {
+      indicator.innerText = "";
+      indicator.style.opacity = "0";
+    }
+  });
 }
 
 function clearUnreadDividers() { document.querySelectorAll(".unread-divider").forEach(d => d.remove()); }
-
-// Función para detectar URLs de Imágenes o Videos y convertirlas en contenido incrustado
-function parseMediaAttachments(text) {
-  if (!text) return "";
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const matches = text.match(urlRegex);
-  let mediaHtml = "";
-
-  if (matches) {
-    matches.forEach(url => {
-      const cleanUrl = url.split('?')[0].toLowerCase();
-      if (cleanUrl.match(/\.(jpeg|jpg|gif|png|webp)$/)) {
-        mediaHtml += `<div class="media-attachment"><img src="${url}"></div>`;
-      } else if (cleanUrl.match(/\.(mp4|webm|mov)$/)) {
-        mediaHtml += `<div class="media-attachment"><video src="${url}" controls></video></div>`;
-      }
-    });
-  }
-  return mediaHtml;
-}
 
 function processMessage(data, type) {
   const targetChannelId = data.channelId || currentChannelId;
@@ -342,7 +318,7 @@ function processMessage(data, type) {
     }
   }
 
-  // 🔴 CONDICIÓN EXTRA: Si estás fuera de la página e ingresa un mensaje al MISMO chat donde estás
+  // REGLA DE ORO: Si estás en otra página fuera de la app y llega un mensaje al chat activo, sale la línea roja
   if (!isWindowFocused && targetChannelId === currentChannelId && !lastMessageDividerAdded) {
     const divider = document.createElement("div");
     divider.className = "unread-divider";
@@ -375,7 +351,18 @@ function processMessage(data, type) {
     : `<div class="avatar">${nameToShow ? nameToShow[0].toUpperCase() : "K"}</div>`;
 
   const timeStr = new Date(msgTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-  const mediaHtml = parseMediaAttachments(data.text);
+
+  // Renderizar texto e incrustar archivos adjuntos si existen (Imágenes y Videos)
+  let attachmentsHtml = "";
+  if (data.attachments && data.attachments.length > 0) {
+    data.attachments.forEach(file => {
+      if (file.contentType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp)$/i.test(file.url)) {
+        attachmentsHtml += `<div class="media-attachment"><img src="${file.url}"></div>`;
+      } else if (file.contentType.startsWith("video/") || /\.(mp4|webm|mov)$/i.test(file.url)) {
+        attachmentsHtml += `<div class="media-attachment"><video src="${file.url}" controls></video></div>`;
+      }
+    });
+  }
 
   div.innerHTML = `
     ${avatarHtml}
@@ -386,7 +373,7 @@ function processMessage(data, type) {
       </div>
       ${data.username && data.username !== "WebUser" ? `<div class="username">@${data.username}</div>` : ''}
       <div class="text">${data.text}</div>
-      ${mediaHtml}
+      ${attachmentsHtml}
     </div>
   `;
 
@@ -404,7 +391,7 @@ function filterMessages() {
   const container = document.getElementById("messages");
   for (let child of container.children) {
     if (!child.dataset.channelId || child.dataset.channelId === currentChannelId) {
-      child.style.display = child.classList.contains("unread-divider") ? "flex" : "flex";
+      child.style.display = "flex";
     } else {
       child.style.display = "none";
     }
@@ -412,12 +399,10 @@ function filterMessages() {
   container.scrollTop = container.scrollHeight;
 }
 
-let typingTimeout;
 window.sendMessage = async function(){
   const text = document.getElementById("msg").value;
   if(!text) return;
 
-  set(ref(db, "typing status"), { isTyping: false, user: "", channelId: "" });
   clearUnreadDividers();
 
   await push(ref(db,"webMessages"), {
