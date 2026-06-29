@@ -91,14 +91,12 @@ async function syncSingleMember(member) {
       isBot: member.user.bot
     };
 
-    // Guardar indexado por servidor y usuario para actualización instantánea
     await db.ref(`serverMembers/${member.guild.id}/${member.user.id}`).set(memberData);
   } catch (err) {
     console.error("Error al sincronizar miembro individual:", err);
   }
 }
 
-// Sincronizar todos los miembros de un servidor (Solo al iniciar)
 async function syncAllGuildMembers(guild) {
   try {
     const membersFetch = await guild.members.fetch({ withPresences: true });
@@ -121,7 +119,6 @@ client.once("ready", async () => {
     });
     await syncServers();
     
-    // Carga inicial de todos los servidores soportados
     for (const [id, guild] of client.guilds.cache) {
       await syncAllGuildMembers(guild);
     }
@@ -130,7 +127,6 @@ client.once("ready", async () => {
   }
 });
 
-// Eventos de Servidores y Canales
 client.on("guildCreate", async (guild) => { await syncServers(); await syncAllGuildMembers(guild); });
 client.on("guildDelete", syncServers);
 client.on("guildUpdate", syncServers);
@@ -138,7 +134,6 @@ client.on("channelCreate", syncServers);
 client.on("channelDelete", syncServers);
 client.on("channelUpdate", syncServers);
 
-// Eventos de Presencia al milisegundo por usuario
 client.on("presenceUpdate", (oldP, newP) => { if (newP?.member) syncSingleMember(newP.member); });
 client.on("guildMemberAdd", syncSingleMember);
 client.on("guildMemberUpdate", syncSingleMember);
@@ -146,9 +141,36 @@ client.on("guildMemberRemove", async (member) => {
   await db.ref(`serverMembers/${member.guild.id}/${member.user.id}`).remove();
 });
 
+// Detectar cuando alguien escribe en Discord y pasarlo a Firebase de inmediato
+client.on("typingStart", (typing) => {
+  if (typing.user.bot) return;
+  db.ref(`typingStatus/${typing.channel.id}`).set({
+    isTyping: true,
+    user: typing.member?.displayName || typing.user.username,
+    timestamp: Date.now()
+  });
+
+  // Apagar el indicador automáticamente tras 4 segundos si Discord no manda actualización
+  setTimeout(() => {
+    db.ref(`typingStatus/${typing.channel.id}`).transaction((current) => {
+      if (current && Date.now() - current.timestamp >= 4000) {
+        return { isTyping: false, user: "", timestamp: 0 };
+      }
+      return current;
+    });
+  }, 4100);
+});
+
 /* 💬 DISCORD → FIREBASE */
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
+
+  // Mapear archivos adjuntos (imágenes o videos)
+  const attachments = message.attachments.map(a => ({
+    url: a.url,
+    name: a.name,
+    contentType: a.contentType || ""
+  }));
 
   await db.ref("discordMessages").push({
     nickname: message.member?.displayName || message.author.username,
@@ -158,6 +180,7 @@ client.on("messageCreate", async (message) => {
     channelId: message.channel.id,
     guildId: message.guild?.id || "",
     server: message.guild?.name || "DM",
+    attachments: attachments,
     timestamp: Date.now()
   });
 });
