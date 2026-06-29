@@ -72,17 +72,6 @@ body {
 }
 .guild-icon-wrap:hover .guild-tooltip { visibility: visible; opacity: 1; left: 84px; }
 
-/* 🔢 BOLITAS ROJAS CON NÚMEROS (CANALES Y SERVIDORES) */
-.unread-badge {
-  position: absolute; right: 8px; min-width: 16px; height: 16px; padding: 0 4px;
-  background-color: #f23f43; color: white; border-radius: 10px; display: none; 
-  align-items: center; justify-content: center; font-size: 10px; font-weight: bold;
-  box-shadow: 0 0 8px #f23f43; box-sizing: border-box; z-index: 5;
-}
-.guild-icon-wrap .unread-badge {
-  right: -2px; bottom: -2px; border: 2px solid var(--bg-guilds);
-}
-
 /* CANALES */
 .sidebar { width: 240px; background: var(--bg-sidebar); display: flex; flex-direction: column; flex-shrink: 0; }
 .sidebar-header { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.03); }
@@ -97,6 +86,18 @@ body {
 .channel-btn:hover { background: rgba(255,255,255,0.03); color: var(--text-main); }
 .channel-btn.active { background: rgba(255,255,255,0.07); color: var(--text-main); }
 .channel-btn::before { content: "#"; font-size: 16px; color: var(--text-muted); }
+
+/* 🔴 BOLITAS ROJAS CON NÚMERO (Soportan texto dinámico) */
+.unread-badge {
+  position: absolute; right: 8px; min-width: 16px; height: 16px; padding: 0 4px;
+  box-sizing: border-box; background-color: #f23f43; border-radius: 8px; display: none; 
+  box-shadow: 0 0 8px #f23f43; color: white; font-size: 11px; font-weight: bold;
+  text-align: center; line-height: 16px; z-index: 5;
+}
+/* Bolita roja específica para la lista de Servidores de la izquierda */
+.guild-icon-wrap .unread-badge {
+  top: -2px; right: -2px; min-width: 18px; height: 18px; line-height: 18px; border-radius: 9px;
+}
 
 /* CHAT */
 .chat { flex: 1; background: var(--bg-chat); display: flex; flex-direction: column; position: relative; }
@@ -114,10 +115,8 @@ body {
 .top { display: flex; gap: 8px; align-items: baseline; }
 .name { font-weight: 500; color: #fff; font-size: 14px; }
 .time { font-size: 11px; color: var(--text-muted); }
-
-/* 🔎 MODIFICACIÓN: @Usuario más pequeño */
-.username { font-size: 10px; color: var(--text-muted); margin-top: -1px; }
-
+/* Achicado sutilmente el @username para un look balanceado */
+.username { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
 .text { color: #dbdee1; margin-top: 3px; font-size: 14.5px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
 
 /* 🔴 SEPARADOR ROJO */
@@ -149,7 +148,7 @@ body {
 .member-sub { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
 .status-emoji { width: 14px; height: 14px; object-fit: contain; flex-shrink: 0; }
 
-/* 🎴 POPOUT DE PERFIL */
+/* 🎴 POPOUT DE PERFIL CLICKEABLE CON ANIMACIÓN */
 .profile-popout {
   position: fixed; right: 250px; width: 260px; background: #111214; border-radius: 12px;
   box-shadow: 0 16px 36px rgba(0,0,0,0.8); z-index: 1000; display: none; flex-direction: column;
