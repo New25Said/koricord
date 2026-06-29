@@ -10,11 +10,11 @@ admin.initializeApp({
 });
 
 const db = admin.database();
+const bootTime = Date.now(); // Marca de tiempo exacta del inicio del servidor
 
 /* 🌐 WEB SERVER */
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 app.use(express.static("public"));
 app.listen(PORT, () => console.log("🌐 Web activa en Render"));
 
@@ -107,18 +107,7 @@ async function syncSingleMember(member) {
     };
 
     await db.ref(`serverMembers/${member.guild.id}/${member.user.id}`).set(memberData);
-  } catch (err) {
-    console.error("Error al sincronizar miembro:", err);
-  }
-}
-
-async function syncAllGuildMembers(guild) {
-  try {
-    const membersFetch = await guild.members.fetch({ withPresences: true });
-    for (const [id, member] of membersFetch) {
-      await syncSingleMember(member);
-    }
-  } catch (e) {}
+  } catch (err) {}
 }
 
 client.once("ready", async () => {
@@ -131,24 +120,12 @@ client.once("ready", async () => {
     });
     await syncServers();
     for (const [id, guild] of client.guilds.cache) {
-      await syncAllGuildMembers(guild);
+      try { await guild.members.fetch({ withPresences: true }); } catch(e){}
     }
   } catch (err) {}
 });
 
-client.on("guildCreate", async (guild) => { await syncServers(); await syncAllGuildMembers(guild); });
-client.on("guildDelete", syncServers);
-client.on("guildUpdate", syncServers);
-client.on("channelCreate", syncServers);
-client.on("channelDelete", syncServers);
-client.on("channelUpdate", syncServers);
-
 client.on("presenceUpdate", (oldP, newP) => { if (newP?.member) syncSingleMember(newP.member); });
-client.on("guildMemberAdd", syncSingleMember);
-client.on("guildMemberUpdate", syncSingleMember);
-client.on("guildMemberRemove", async (member) => {
-  await db.ref(`serverMembers/${member.guild.id}/${member.user.id}`).remove();
-});
 
 client.on("typingStart", (typing) => {
   if (typing.user.bot) return;
@@ -157,7 +134,6 @@ client.on("typingStart", (typing) => {
     user: typing.member?.displayName || typing.user.username,
     timestamp: Date.now()
   });
-
   setTimeout(() => {
     db.ref(`typingStatus/${typing.channel.id}`).transaction((current) => {
       if (current && Date.now() - current.timestamp >= 4000) {
@@ -190,9 +166,9 @@ client.on("messageCreate", async (message) => {
   if (!message.guild) {
     const userId = message.author.id;
     msgData.userId = userId;
+    msgData.channelId = userId; // Unificar propiedad identificadora
 
     await db.ref(`dmMessages/${userId}`).push(msgData);
-
     await db.ref(`dmChats/${userId}`).set({
       id: userId,
       username: message.author.username,
@@ -203,30 +179,26 @@ client.on("messageCreate", async (message) => {
   } else {
     msgData.channelId = message.channel.id;
     msgData.guildId = message.guild.id;
-    await db.ref("discordMessages").push(msgData);
+    // Indexar los mensajes organizados por canal para evitar colapsos visuales en el Front
+    await db.ref(`serverChannelMessages/${message.channel.id}`).push(msgData);
   }
 });
 
 /* 🌐 WEB → DISCORD */
 db.ref("webMessages").on("child_added", async (snap) => {
   const data = snap.val();
-  if (!data?.text) return;
+  // REGLA DE ORO: Si el mensaje fue guardado antes de encender el servidor actual, ignorarlo por completo
+  if (!data?.text || (data.time && data.time < bootTime)) return;
 
   try {
     if (data.isDM && data.userId) {
       const user = await client.users.fetch(data.userId);
-      if (user) {
-        await user.send(data.text);
-      }
+      if (user) await user.send(data.text);
     } else if (data.channelId) {
       const channel = await client.channels.fetch(data.channelId);
-      if (channel && channel.isTextBased()) {
-        await channel.send(data.text);
-      }
+      if (channel && channel.isTextBased()) await channel.send(data.text);
     }
-  } catch (err) {
-    console.error("Error al despachar mensaje desde la Web:", err);
-  }
+  } catch (err) {}
 });
 
 client.login(process.env.DISCORD_TOKEN);
