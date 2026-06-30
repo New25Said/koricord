@@ -128,7 +128,6 @@ async function syncSingleMember(member) {
       });
     }
 
-    // Nota: Discord.js expone la bio en .aboutMe o a veces en .banner (fallback estructural) si está cacheado externamente.
     const memberData = {
       id: member.user.id,
       username: member.user.username,
