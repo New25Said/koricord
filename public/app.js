@@ -206,7 +206,7 @@ function renderMembers(members) {
     const info = document.createElement("div");
     info.className = "member-info";
     
-    const subText = m.customStatus ? m.customStatus : (m.isBot ? 'ðŸ¤– BOT' : `@${m.username}`);
+    const subText = m.customStatus ? m.customStatus : (m.isBot ? '🤖 BOT' : `@${m.username}`);
 
     info.innerHTML = `
       <div class="member-name">${m.nickname || m.username}</div>
@@ -224,7 +224,7 @@ function renderMembers(members) {
 
       // 1. Renderizar Spotify Estilo Premium
       if (m.spotify) {
-        const coverImg = m.spotify.image ? `<img class="activity-img spotify-glow" src="${m.spotify.image}">` : `<div class="activity-img-placeholder spotify-bg">ðŸŽµ</div>`;
+        const coverImg = m.spotify.image ? `<img class="activity-img spotify-glow" src="${m.spotify.image}">` : `<div class="activity-img-placeholder spotify-bg">🎵</div>`;
         activitiesHtml += `
           <div class="activity-block">
             <div class="popout-section-title status-spotify">Escuchando Spotify</div>
@@ -240,16 +240,16 @@ function renderMembers(members) {
         `;
       }
 
-      // 2. Renderizar Lista acumulativa de mÃºltiples actividades simultÃ¡neas
+      // 2. Renderizar Lista acumulativa de múltiples actividades simultáneas
       if (m.activities && Array.isArray(m.activities)) {
         m.activities.forEach(act => {
           let bgClass = "game-bg";
-          let defaultIcon = "ðŸŽ®";
+          let defaultIcon = "🎮";
           let headingClass = "status-game";
 
           if (act.type === "voice") {
             bgClass = "voice-bg";
-            defaultIcon = "ðŸ”Š";
+            defaultIcon = "🔊";
             headingClass = "status-voice";
           }
 
@@ -277,7 +277,7 @@ function renderMembers(members) {
           <div class="activity-block">
             <div class="popout-section-title status-game">Actividad</div>
             <div class="popout-activity-box">
-              <div class="activity-img-wrap"><div class="activity-img-placeholder game-bg">ðŸŽ®</div></div>
+              <div class="activity-img-wrap"><div class="activity-img-placeholder game-bg">🎮</div></div>
               <div class="activity-info">
                 <div class="activity-title">${m.activity}</div>
               </div>
@@ -295,7 +295,7 @@ function renderMembers(members) {
             <div class="popout-status-dot-overlay ${m.status}"></div>
           </div>
           
-          <!-- ðŸ’¬ Globo de Estado Estilo Discord (Con expansiÃ³n en :hover) -->
+          <!-- 💬 Globo de Estado Estilo Discord (Con expansión dinámica limpia en :hover) -->
           ${m.customStatus ? `
             <div class="popout-status-bubble">
               <div class="bubble-content">${m.customStatus}</div>
@@ -309,20 +309,20 @@ function renderMembers(members) {
             <div class="popout-user">@${m.username}</div>
           </div>
 
-          <!-- ðŸ“‘ DescripciÃ³n / BiografÃ­a del Usuario -->
+          <!-- 📑 Descripción / Biografía del Usuario -->
           ${m.aboutMe ? `
             <div class="popout-description-section">
-              <div class="popout-section-title">Sobre MÃ­</div>
+              <div class="popout-section-title">Sobre Mí</div>
               <div class="popout-description-text">${m.aboutMe}</div>
             </div>
           ` : `
             <div class="popout-description-section">
-              <div class="popout-section-title">Sobre MÃ­</div>
-              <div class="popout-description-text style-muted"><i>Sin biografÃ­a en este perfil.</i></div>
+              <div class="popout-section-title">Sobre Mí</div>
+              <div class="popout-description-text style-muted"><i>Sin biografía en este perfil.</i></div>
             </div>
           `}
 
-          <!-- âš¡ Zona con scroll dedicada a MÃºltiples Actividades -->
+          <!-- ⚡ Zona con scroll dedicada a Múltiples Actividades -->
           ${activitiesHtml ? `
             <div class="popout-scrollable-activities">
               ${activitiesHtml}
@@ -360,7 +360,7 @@ function switchChannel(id, name) {
     const data = snap.val();
     const indicator = document.getElementById("typing");
     if (data && data.isTyping && data.user !== cachedKoriProfile?.nickname) {
-      indicator.innerText = `${data.user} estÃ¡ escribiendo...`;
+      indicator.innerText = `${data.user} está escribiendo...`;
       indicator.style.opacity = "1";
     } else {
       indicator.innerText = "";
@@ -397,7 +397,7 @@ function processMessage(data, type) {
 
     if (!isWindowFocused) {
       unreadCount++;
-      document.title = `ðŸ”´ (${unreadCount}) KoriCord Futurist`;
+      document.title = `🔴 (${unreadCount}) KoriCord Futurist`;
     }
   }
 
