@@ -37,6 +37,9 @@ let currentTypingListener = null;
 // Rastrear qué usuario está abierto en el popout
 let activePopoutUserId = null;
 
+// Temporizador global para la barra de progreso simulada de Spotify
+let spotifyProgressInterval = null;
+
 const popout = document.createElement("div");
 popout.className = "profile-popout";
 document.body.appendChild(popout);
@@ -57,6 +60,7 @@ document.addEventListener("click", (e) => {
   if (!popout.contains(e.target) && !e.target.closest(".member-item")) {
     popout.style.display = "none";
     activePopoutUserId = null;
+    if (spotifyProgressInterval) clearInterval(spotifyProgressInterval);
   }
   contextMenu.style.display = "none";
   clearUnreadDividers();
@@ -191,7 +195,6 @@ function selectServer(serverId) {
 
       btn.onclick = () => switchChannel(ch.id, ch.name);
       
-      // Evento de click derecho para desplegar la opción de borrar mensajes del canal
       wrap.oncontextmenu = (e) => {
         e.preventDefault();
         contextMenu.innerHTML = `<div class="context-item" style="color: #f23f43; font-size: 13px; font-weight: 500; padding: 6px 10px; cursor: pointer; border-radius: 2px;">Eliminar mensajes del canal</div>`;
@@ -222,22 +225,51 @@ let cachedKoriProfile = null;
 function renderPopoutContent(m) {
   let activitiesHtml = "";
 
-  // 1. Renderizar Spotify Estilo Premium
+  if (spotifyProgressInterval) clearInterval(spotifyProgressInterval);
+
+  // 1. Renderizar Spotify Estilo Premium con Brillo Camaleón y Barra Dinámica
   if (m.spotify) {
-    const coverImg = m.spotify.image ? `<img class="activity-img spotify-glow" src="${m.spotify.image}">` : `<div class="activity-img-placeholder spotify-bg">🎵</div>`;
+    const coverUrl = m.spotify.image || '';
+    const coverImg = coverUrl ? `<img class="activity-img spotify-glow" src="${coverUrl}" style="--spotify-album-cover: url('${coverUrl}');">` : `<div class="activity-img-placeholder spotify-bg">🎵</div>`;
+    
     activitiesHtml += `
-      <div class="activity-block">
+      <div class="activity-block" style="--cover-url: url('${coverUrl}');">
         <div class="popout-section-title status-spotify">Escuchando Spotify</div>
         <div class="popout-activity-box">
           <div class="activity-img-wrap">${coverImg}</div>
           <div class="activity-info">
-            <div class="activity-title text-spotify">${m.spotify.song}</div>
+            <div class="activity-title text-spotify dynamic-color-title">${m.spotify.song}</div>
             <div class="activity-details">de ${m.spotify.artist}</div>
             ${m.spotify.album ? `<div class="activity-details style-muted">en ${m.spotify.album}</div>` : ''}
+            
+            <!-- Barra de tiempo en tiempo real -->
+            <div class="spotify-time-container">
+              <div class="spotify-progress-bar"><div class="spotify-progress-fill" id="popoutSpotifyFill" style="width: 35%;"></div></div>
+              <div class="spotify-time-labels"><span id="spotifyCurrentTime">0:42</span><span id="spotifyTotalTime">3:15</span></div>
+            </div>
           </div>
         </div>
       </div>
     `;
+
+    // Lógica para simular el tiempo real de la canción
+    let currentSeconds = 42; 
+    const totalSeconds = 195; 
+    setTimeout(() => {
+      const fillNode = document.getElementById("popoutSpotifyFill");
+      const labelCurrent = document.getElementById("spotifyCurrentTime");
+      const labelTotal = document.getElementById("spotifyTotalTime");
+      if (labelTotal) labelTotal.innerText = `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`;
+
+      spotifyProgressInterval = setInterval(() => {
+        currentSeconds++;
+        if (currentSeconds > totalSeconds) currentSeconds = 0;
+        if (fillNode && labelCurrent) {
+          fillNode.style.width = `${(currentSeconds / totalSeconds) * 100}%`;
+          labelCurrent.innerText = `${Math.floor(currentSeconds / 60)}:${String(currentSeconds % 60).padStart(2, '0')}`;
+        }
+      }, 1000);
+    }, 50);
   }
 
   // 2. Renderizar Lista acumulativa de múltiples actividades simultáneas
@@ -271,7 +303,6 @@ function renderPopoutContent(m) {
     });
   }
 
-  // Fallback por si la base de datos tiene actividad simple de tipo texto antiguo
   if (m.activity && !m.spotify && (!m.activities || m.activities.length === 0)) {
     activitiesHtml += `
       <div class="activity-block">
@@ -295,7 +326,6 @@ function renderPopoutContent(m) {
         <div class="popout-status-dot-overlay ${m.status}"></div>
       </div>
       
-      <!-- 💬 Globo de Estado Estilo Discord (Con expansión dinámica limpia en :hover) -->
       ${m.customStatus ? `
         <div class="popout-status-bubble">
           <div class="bubble-content">${m.customStatus}</div>
@@ -309,7 +339,6 @@ function renderPopoutContent(m) {
         <div class="popout-user">@${m.username}</div>
       </div>
 
-      <!-- 📑 Descripción / Biografía del Usuario -->
       ${m.aboutMe ? `
         <div class="popout-description-section">
           <div class="popout-section-title">Sobre Mí</div>
@@ -322,7 +351,6 @@ function renderPopoutContent(m) {
         </div>
       `}
 
-      <!-- ⚡ Zona con scroll dedicada a Múltiples Actividades -->
       ${activitiesHtml ? `
         <div class="popout-scrollable-activities">
           ${activitiesHtml}
@@ -340,7 +368,6 @@ function renderMembers(members) {
   Object.values(members).forEach(m => {
     if (m.id === botId) cachedKoriProfile = m;
 
-    // ACTUALIZACIÓN Abierto y Realtime: Si cambian los datos del perfil que está visualizándose actualmente, se refresca
     if (activePopoutUserId === m.id) {
       renderPopoutContent(m);
     }
@@ -359,11 +386,13 @@ function renderMembers(members) {
     const info = document.createElement("div");
     info.className = "member-info";
     
+    // ICONO NOTA MUSICAL: Si está escuchando Spotify, añade el indicador al subtexto
+    const spotifyIcon = m.spotify ? `<span class="spotify-indicator-note" style="color: var(--spotify); margin-left: 4px;">🎵</span>` : "";
     const subText = m.customStatus ? m.customStatus : (m.isBot ? '🤖 BOT' : `@${m.username}`);
 
     info.innerHTML = `
       <div class="member-name">${m.nickname || m.username}</div>
-      <div class="member-sub">${subText}</div>
+      <div class="member-sub">${subText} ${spotifyIcon}</div>
     `;
 
     item.appendChild(avContainer); item.appendChild(info);
@@ -535,7 +564,7 @@ window.sendMessage = async function(){
     time: Date.now(),
     username: "WebUser",
     nickname: cachedKoriProfile ? (cachedKoriProfile.nickname || cachedKoriProfile.username) : "Kori",
-    avatar: cachedKoriProfile ? cachedKoriProfile.avatar : "", // Se guarda el avatar activo en la BD para conservar la foto al recargar
+    avatar: cachedKoriProfile ? cachedKoriProfile.avatar : "", 
     channelId: currentChannelId,
     guildId: currentServerId
   });
