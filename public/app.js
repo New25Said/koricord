@@ -230,7 +230,7 @@ function renderPopoutContent(m) {
   // 1. Renderizar Spotify Estilo Premium con Brillo Camaleón y Barra Dinámica
   if (m.spotify) {
     const coverUrl = m.spotify.image || '';
-    const coverImg = coverUrl ? `<img class="activity-img spotify-glow" src="${coverUrl}" style="--spotify-album-cover: url('${coverUrl}');">` : `<div class="activity-img-placeholder spotify-bg">🎵</div>`;
+    const coverImg = coverUrl ? `<img class="activity-img spotify-glow" src="${coverUrl}" style="--spotify-album-cover: url('${coverUrl}');">` : `<div class="activity-img-placeholder spotify-bg"><div class="minimal-music-favicon"></div></div>`;
     
     activitiesHtml += `
       <div class="activity-block" style="--cover-url: url('${coverUrl}');">
@@ -242,7 +242,6 @@ function renderPopoutContent(m) {
             <div class="activity-details">de ${m.spotify.artist}</div>
             ${m.spotify.album ? `<div class="activity-details style-muted">en ${m.spotify.album}</div>` : ''}
             
-            <!-- Barra de tiempo en tiempo real -->
             <div class="spotify-time-container">
               <div class="spotify-progress-bar"><div class="spotify-progress-fill" id="popoutSpotifyFill" style="width: 35%;"></div></div>
               <div class="spotify-time-labels"><span id="spotifyCurrentTime">0:42</span><span id="spotifyTotalTime">3:15</span></div>
@@ -252,7 +251,6 @@ function renderPopoutContent(m) {
       </div>
     `;
 
-    // Lógica para simular el tiempo real de la canción
     let currentSeconds = 42; 
     const totalSeconds = 195; 
     setTimeout(() => {
@@ -272,20 +270,28 @@ function renderPopoutContent(m) {
     }, 50);
   }
 
-  // 2. Renderizar Lista acumulativa de múltiples actividades simultáneas
+  // 2. Renderizar Lista acumulativa con discriminación de color de marca por actividad
   if (m.activities && Array.isArray(m.activities)) {
     m.activities.forEach(act => {
       let bgClass = "game-bg";
-      let defaultIcon = "🎮";
       let headingClass = "status-game";
+      let customFaviconClass = "minimal-game-favicon";
+
+      const nameLower = act.name ? act.name.toLowerCase() : "";
+      const headerLower = act.header ? act.header.toLowerCase() : "";
 
       if (act.type === "voice") {
         bgClass = "voice-bg";
-        defaultIcon = "🔊";
         headingClass = "status-voice";
+        customFaviconClass = "minimal-voice-favicon";
+      } else if (nameLower.includes("watch together") || nameLower.includes("youtube") || headerLower.includes("youtube")) {
+        bgClass = "youtube-bg";
+        headingClass = "status-youtube";
+        customFaviconClass = "minimal-youtube-favicon";
       }
 
-      const actImg = act.image ? `<img class="activity-img" src="${act.image}">` : `<div class="activity-img-placeholder ${bgClass}">${defaultIcon}</div>`;
+      // Si la actividad de Discord no tiene portada, se inyecta el favicon minimalista limpio y elegante
+      const actImg = act.image ? `<img class="activity-img" src="${act.image}">` : `<div class="activity-img-placeholder ${bgClass}"><div class="${customFaviconClass}"></div></div>`;
 
       activitiesHtml += `
         <div class="activity-block">
@@ -308,7 +314,7 @@ function renderPopoutContent(m) {
       <div class="activity-block">
         <div class="popout-section-title status-game">Actividad</div>
         <div class="popout-activity-box">
-          <div class="activity-img-wrap"><div class="activity-img-placeholder game-bg">🎮</div></div>
+          <div class="activity-img-wrap"><div class="activity-img-placeholder game-bg"><div class="minimal-game-favicon"></div></div></div>
           <div class="activity-info">
             <div class="activity-title">${m.activity}</div>
           </div>
@@ -352,7 +358,7 @@ function renderPopoutContent(m) {
       `}
 
       ${activitiesHtml ? `
-        <div class="popout-scrollable-activities">
+        <div class="popout-scrollable-activities-container">
           ${activitiesHtml}
         </div>
       ` : ''}
@@ -386,13 +392,16 @@ function renderMembers(members) {
     const info = document.createElement("div");
     info.className = "member-info";
     
-    // ICONO NOTA MUSICAL: Si está escuchando Spotify, añade el indicador al subtexto
-    const spotifyIcon = m.spotify ? `<span class="spotify-indicator-note" style="color: var(--spotify); margin-left: 4px;">🎵</span>` : "";
-    const subText = m.customStatus ? m.customStatus : (m.isBot ? '🤖 BOT' : `@${m.username}`);
+    // VINCUlO FAVICON AL LADO DEL NOMBRE: Si escucha música, inyectamos un favicon nativo CSS al lado de su nick[cite: 6]
+    const spotifyFavicon = m.spotify ? `<div class="spotify-favicon-node"></div>` : "";
+    const subText = m.customStatus ? m.customStatus : (m.isBot ? 'BOT' : `@${m.username}`);
 
     info.innerHTML = `
-      <div class="member-name">${m.nickname || m.username}</div>
-      <div class="member-sub">${subText} ${spotifyIcon}</div>
+      <div class="member-name-row">
+        <span class="member-name">${m.nickname || m.username}</span>
+        ${spotifyFavicon}
+      </div>
+      <div class="member-sub">${subText}</div>
     `;
 
     item.appendChild(avContainer); item.appendChild(info);
@@ -471,7 +480,7 @@ function processMessage(data, type) {
 
     if (!isWindowFocused) {
       unreadCount++;
-      document.title = `🔴 (${unreadCount}) KoriCord Futurist`;
+      document.title = `(${unreadCount}) KoriCord Futurist`;
     }
   }
 
