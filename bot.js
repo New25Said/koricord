@@ -2,7 +2,7 @@ import { Client, GatewayIntentBits } from "discord.js";
 import express from "express";
 import admin from "firebase-admin";
 
-/* 🔐 FIREBASE */
+/* ðŸ” FIREBASE */
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -11,14 +11,14 @@ admin.initializeApp({
 
 const db = admin.database();
 
-/* 🌐 WEB SERVER */
+/* ðŸŒ WEB SERVER */
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static("public"));
-app.listen(PORT, () => console.log("🌐 Web activa en Render"));
+app.listen(PORT, () => console.log("ðŸŒ Web activa en Render"));
 
-/* 🤖 DISCORD BOT */
+/* ðŸ¤– DISCORD BOT */
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -70,7 +70,7 @@ async function syncSingleMember(member) {
         header: "EN CANAL DE VOZ",
         name: voiceState.channel.name,
         details: member.guild.name,
-        state: `🔊 Conectado ${voiceState.selfVideo ? "🎥 En Cámara" : ""}`
+        state: `ðŸ”Š Conectado ${voiceState.selfVideo ? "ðŸŽ¥ En CÃ¡mara" : ""}`
       });
     }
 
@@ -92,7 +92,7 @@ async function syncSingleMember(member) {
             spotifyTrackImg = `https://i.scdn.co/image/${imgId}`;
           }
           spotifyDetails = {
-            song: act.details || "Canción desconocida",
+            song: act.details || "CanciÃ³n desconocida",
             artist: act.state || "Artista desconocido",
             album: act.assets?.largeText || "",
             image: spotifyTrackImg
@@ -128,6 +128,7 @@ async function syncSingleMember(member) {
       });
     }
 
+    // Nota: Discord.js expone la bio en .aboutMe o a veces en .banner (fallback estructural) si estÃ¡ cacheado externamente.
     const memberData = {
       id: member.user.id,
       username: member.user.username,
@@ -158,7 +159,7 @@ async function syncAllGuildMembers(guild) {
 }
 
 client.once("ready", async () => {
-  console.log(`🤖 Logueado como ${client.user.tag}`);
+  console.log(`ðŸ¤– Logueado como ${client.user.tag}`);
   try {
     await db.ref("botConfig").set({
       id: client.user.id,
