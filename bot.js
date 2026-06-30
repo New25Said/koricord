@@ -104,7 +104,6 @@ async function syncSingleMember(member) {
         const typeNames = ["JUGANDO A", "TRANSMITIENDO", "ESCUCHANDO A", "VIENDO", "COMPITIENDO EN", "COMPARTIENDO"];
         let headerText = typeNames[act.type] || "ACTIVIDAD";
         
-        // Detección especial de actividades integradas (como Watch Together, Gartic, etc.)
         if (act.applicationId) {
           headerText = "COMPARTIENDO ACTIVIDAD";
         }
@@ -129,17 +128,18 @@ async function syncSingleMember(member) {
       });
     }
 
+    // Nota: Discord.js expone la bio en .aboutMe o a veces en .banner (fallback estructural) si está cacheado externamente.
     const memberData = {
       id: member.user.id,
       username: member.user.username,
       nickname: member.displayName,
       avatar: member.user.displayAvatarURL({ extension: "png", size: 128 }),
       bannerColor: userFull.hexAccentColor || "#5865f2",
-      aboutMe: userFull.aboutMe || "", // Captura de la biografía/descripción del usuario
+      aboutMe: userFull.aboutMe || userFull.description || "", 
       status: status,
       customStatus: customStatusText,
       spotify: spotifyDetails,
-      activities: activitiesList, // Lista unificada de todo lo que está haciendo
+      activities: activitiesList,
       isBot: member.user.bot
     };
 
