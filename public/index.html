@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KoriCord Futurist</title>
+  <title>KoriCord</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,7 +12,7 @@
   <div id="loginScreen" class="login-screen">
     <div class="login-box">
       <h3>¿Eres Kori?</h3>
-      <input id="loginInput" type="password" placeholder="Escribe la clave secreta...">
+      <input id="loginInput" type="password" placeholder="soy + tu nombre (sin espacio ni mayus)">
       <button onclick="checkLogin()">Entrar</button>
       <div id="errorMsg" class="error-msg">Esto es solo para kori, intenta otra vez</div>
     </div>
@@ -22,52 +22,39 @@
   <div class="app-container">
     
     <!-- Barra de Servidores Múltiples -->
-    <div class="guilds-sidebar">
-      <!-- Botón de Mensajes Directos (Estilo Discord Superior) -->
-      <div class="guild-icon-wrap" id="dmHomeBtn" onclick="selectDMHome()">
-        <div class="guild-icon dm-home-icon">
-          <svg width="24" height="24" viewBox="0 0 127.14 96.36" fill="currentColor"><path d="M107.7,8.07A105.15,105.15,0,0,0,77.26,0a77.19,77.19,0,0,0-3.3,6.83A96.67,96.67,0,0,0,53.22,6.83,77.19,77.19,0,0,0,49.88,0,105.15,105.15,0,0,0,19.44,8.07C3.66,31.58-1.86,54.65,1,77.53A105.73,105.73,0,0,0,32,96.36a74.37,74.37,0,0,0,6.66-10.85A68.52,68.52,0,0,1,28,79.82c.94-.69,1.84-1.42,2.71-2.17a75.52,75.52,0,0,0,93.18,0c.87.75,1.77,1.48,2.71,2.17a68.52,68.52,0,0,1-10.65,5.69,74.37,74.37,0,0,0,6.66,10.85,105.73,105.73,0,0,0,31-18.83C129,54.65,123.5,31.58,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53S36.18,40.36,42.45,40.36,53.83,46,53.83,53,48.72,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.24,60,73.24,53S78.41,40.36,84.69,40.36,96.07,46,96.07,53,91,65.69,84.69,65.69Z"/></svg>
-        </div>
-        <span class="guild-tooltip">Mensajes directos</span>
-        <div class="unread-badge" id="dm-global-badge"></div>
-      </div>
-      
-      <div class="server-separator"></div>
-      <div id="guildsSidebar" class="guilds-container"></div>
-    </div>
+    <div class="guilds-sidebar" id="guildsSidebar"></div>
 
-    <!-- Barra Lateral Izquierda (Canales o Lista de Mensajes Directos) -->
+    <!-- Canales del Servidor Seleccionado -->
     <div class="sidebar">
       <div class="sidebar-header">
-        <h2 id="serverTitle">Mensajes directos</h2>
-        <div class="sub" id="serverSub">Conversaciones directas</div>
+        <h2 id="serverTitle">KoriCord</h2>
+        <div class="sub">2PyM 🌐</div>
       </div>
-      <div class="channels-list" id="channelsList">
-        <!-- Los canales del servidor o chats de MD se inyectan dinámicamente aquí -->
-      </div>
+      <div class="channels-list" id="channelsList"></div>
     </div>
 
     <!-- Chat Principal -->
     <div class="chat">
       <div class="chat-header">
         <div class="header-left">
-          <span class="hashtag" id="chatHeaderPrefix">@</span>
-          <span id="currentChannelName">selecciona-un-chat</span>
+          <span class="hashtag">#</span>
+          <span id="currentChannelName">selecciona-canal</span>
         </div>
-        <button class="toggle-members-btn" id="membersToggleBtn" onclick="toggleMembersList()">👥 Miembros</button>
+        <button class="toggle-members-btn" onclick="toggleMembersList()">👥 Miembros</button>
       </div>
       
       <div id="messages" class="messages"></div>
       
+      <!-- REGLA DE ORO: Ubicado perfectamente arriba del cuadro de texto -->
       <div id="typing" class="typing-indicator"></div>
       
       <div class="input">
-        <input id="msg" placeholder="Escribe un mensaje...">
+        <input id="msg" placeholder="Escribe a Discord...">
         <button onclick="sendMessage()">Enviar</button>
       </div>
     </div>
 
-    <!-- Lista de Miembros (Derecha Ocultable) -->
+    <!-- Lista de Miembros -->
     <div class="members-sidebar" id="membersSidebar">
       <div class="members-title">MIEMBROS</div>
       <div class="members-list" id="membersList"></div>
