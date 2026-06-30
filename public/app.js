@@ -33,6 +33,9 @@ let channelUnreadCounts = {};
 let serverUnreadCounts = {};
 let currentTypingListener = null;
 
+// Variable global para rastrear qué perfil está abierto en el popout actualmente
+let activePopoutUserId = null;
+
 const popout = document.createElement("div");
 popout.className = "profile-popout";
 document.body.appendChild(popout);
@@ -40,6 +43,7 @@ document.body.appendChild(popout);
 document.addEventListener("click", (e) => {
   if (!popout.contains(e.target) && !e.target.closest(".member-item")) {
     popout.style.display = "none";
+    activePopoutUserId = null;
   }
   clearUnreadDividers();
 });
@@ -192,6 +196,11 @@ function renderMembers(members) {
   Object.values(members).forEach(m => {
     if (m.id === botId) cachedKoriProfile = m;
 
+    // ACTUALIZACIÓN EN TIEMPO REAL: Si este usuario es el que está abierto en el popout, refrescamos sus datos directamente
+    if (activePopoutUserId === m.id) {
+      updatePopoutHTML(m);
+    }
+
     const item = document.createElement("div");
     item.className = "member-item";
 
@@ -220,121 +229,121 @@ function renderMembers(members) {
       const rect = item.getBoundingClientRect();
       popout.style.top = `${Math.min(rect.top - 10, window.innerHeight - 440)}px`;
       
-      let activitiesHtml = "";
-
-      // 1. Renderizar Spotify Estilo Premium
-      if (m.spotify) {
-        const coverImg = m.spotify.image ? `<img class="activity-img spotify-glow" src="${m.spotify.image}">` : `<div class="activity-img-placeholder spotify-bg">🎵</div>`;
-        activitiesHtml += `
-          <div class="activity-block">
-            <div class="popout-section-title status-spotify">Escuchando Spotify</div>
-            <div class="popout-activity-box">
-              <div class="activity-img-wrap">${coverImg}</div>
-              <div class="activity-info">
-                <div class="activity-title text-spotify">${m.spotify.song}</div>
-                <div class="activity-details">de ${m.spotify.artist}</div>
-                ${m.spotify.album ? `<div class="activity-details style-muted">en ${m.spotify.album}</div>` : ''}
-              </div>
-            </div>
-          </div>
-        `;
-      }
-
-      // 2. Renderizar Lista acumulativa de múltiples actividades simultáneas
-      if (m.activities && Array.isArray(m.activities)) {
-        m.activities.forEach(act => {
-          let bgClass = "game-bg";
-          let defaultIcon = "🎮";
-          let headingClass = "status-game";
-
-          if (act.type === "voice") {
-            bgClass = "voice-bg";
-            defaultIcon = "🔊";
-            headingClass = "status-voice";
-          }
-
-          const actImg = act.image ? `<img class="activity-img" src="${act.image}">` : `<div class="activity-img-placeholder ${bgClass}">${defaultIcon}</div>`;
-
-          activitiesHtml += `
-            <div class="activity-block">
-              <div class="popout-section-title ${headingClass}">${act.header || 'JUGANDO A'}</div>
-              <div class="popout-activity-box">
-                <div class="activity-img-wrap">${actImg}</div>
-                <div class="activity-info">
-                  <div class="activity-title">${act.name}</div>
-                  ${act.details ? `<div class="activity-details">${act.details}</div>` : ''}
-                  ${act.state ? `<div class="activity-details style-muted">${act.state}</div>` : ''}
-                </div>
-              </div>
-            </div>
-          `;
-        });
-      }
-
-      // Fallback por si la base de datos tiene actividad simple de tipo texto antiguo
-      if (m.activity && !m.spotify && (!m.activities || m.activities.length === 0)) {
-        activitiesHtml += `
-          <div class="activity-block">
-            <div class="popout-section-title status-game">Actividad</div>
-            <div class="popout-activity-box">
-              <div class="activity-img-wrap"><div class="activity-img-placeholder game-bg">🎮</div></div>
-              <div class="activity-info">
-                <div class="activity-title">${m.activity}</div>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-
-      popout.innerHTML = `
-        <div class="popout-banner" style="background-color: ${m.bannerColor || '#5865f2'};"></div>
-        
-        <div class="popout-header-row">
-          <div class="popout-avatar-wrap">
-            ${m.avatar ? `<img class="popout-avatar" src="${m.avatar}">` : `<div class="popout-avatar">${m.nickname[0]}</div>`}
-            <div class="popout-status-dot-overlay ${m.status}"></div>
-          </div>
-          
-          <!-- 💬 Globo de Estado Estilo Discord (Con expansión dinámica limpia en :hover) -->
-          ${m.customStatus ? `
-            <div class="popout-status-bubble">
-              <div class="bubble-content">${m.customStatus}</div>
-            </div>
-          ` : ''}
-        </div>
-
-        <div class="popout-body">
-          <div class="popout-names">
-            <div class="popout-nick">${m.nickname || m.username}</div>
-            <div class="popout-user">@${m.username}</div>
-          </div>
-
-          <!-- 📑 Descripción / Biografía del Usuario -->
-          ${m.aboutMe ? `
-            <div class="popout-description-section">
-              <div class="popout-section-title">Sobre Mí</div>
-              <div class="popout-description-text">${m.aboutMe}</div>
-            </div>
-          ` : `
-            <div class="popout-description-section">
-              <div class="popout-section-title">Sobre Mí</div>
-              <div class="popout-description-text style-muted"><i>Sin biografía en este perfil.</i></div>
-            </div>
-          `}
-
-          <!-- ⚡ Zona con scroll dedicada a Múltiples Actividades -->
-          ${activitiesHtml ? `
-            <div class="popout-scrollable-activities">
-              ${activitiesHtml}
-            </div>
-          ` : ''}
-        </div>
-      `;
+      activePopoutUserId = m.id;
+      updatePopoutHTML(m);
       popout.style.display = "flex";
     };
 
     container.appendChild(item);
   });
+}
+
+// Función auxiliar encargada de inyectar el HTML limpio y actualizado en la tarjeta de perfil
+function updatePopoutHTML(m) {
+  let activitiesHtml = "";
+
+  if (m.spotify) {
+    const coverImg = m.spotify.image ? `<img class="activity-img spotify-glow" src="${m.spotify.image}">` : `<div class="activity-img-placeholder spotify-bg">🎵</div>`;
+    activitiesHtml += `
+      <div class="activity-block">
+        <div class="popout-section-title status-spotify">Escuchando Spotify</div>
+        <div class="popout-activity-box">
+          <div class="activity-img-wrap">${coverImg}</div>
+          <div class="activity-info">
+            <div class="activity-title text-spotify">${m.spotify.song}</div>
+            <div class="activity-details">de ${m.spotify.artist}</div>
+            ${m.spotify.album ? `<div class="activity-details style-muted">en ${m.spotify.album}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (m.activities && Array.isArray(m.activities)) {
+    m.activities.forEach(act => {
+      let bgClass = "game-bg";
+      let defaultIcon = "🎮";
+      let headingClass = "status-game";
+
+      if (act.type === "voice") {
+        bgClass = "voice-bg";
+        defaultIcon = "🔊";
+        headingClass = "status-voice";
+      }
+
+      const actImg = act.image ? `<img class="activity-img" src="${act.image}">` : `<div class="activity-img-placeholder ${bgClass}">${defaultIcon}</div>`;
+
+      activitiesHtml += `
+        <div class="activity-block">
+          <div class="popout-section-title ${headingClass}">${act.header || 'JUGANDO A'}</div>
+          <div class="popout-activity-box">
+            <div class="activity-img-wrap">${actImg}</div>
+            <div class="activity-info">
+              <div class="activity-title">${act.name}</div>
+              ${act.details ? `<div class="activity-details">${act.details}</div>` : ''}
+              ${act.state ? `<div class="activity-details style-muted">${act.state}</div>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  if (m.activity && !m.spotify && (!m.activities || m.activities.length === 0)) {
+    activitiesHtml += `
+      <div class="activity-block">
+        <div class="popout-section-title status-game">Actividad</div>
+        <div class="popout-activity-box">
+          <div class="activity-img-wrap"><div class="activity-img-placeholder game-bg">🎮</div></div>
+          <div class="activity-info">
+            <div class="activity-title">${m.activity}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  popout.innerHTML = `
+    <div class="popout-banner" style="background-color: ${m.bannerColor || '#5865f2'};"></div>
+    
+    <div class="popout-header-row">
+      <div class="popout-avatar-wrap">
+        ${m.avatar ? `<img class="popout-avatar" src="${m.avatar}">` : `<div class="popout-avatar">${m.nickname[0]}</div>`}
+        <div class="popout-status-dot-overlay ${m.status}"></div>
+      </div>
+      
+      ${m.customStatus ? `
+        <div class="popout-status-bubble">
+          <div class="bubble-content">${m.customStatus}</div>
+        </div>
+      ` : ''}
+    </div>
+
+    <div class="popout-body">
+      <div class="popout-names">
+        <div class="popout-nick">${m.nickname || m.username}</div>
+        <div class="popout-user">@${m.username}</div>
+      </div>
+
+      ${m.aboutMe ? `
+        <div class="popout-description-section">
+          <div class="popout-section-title">Sobre Mí</div>
+          <div class="popout-description-text">${m.aboutMe}</div>
+        </div>
+      ` : `
+        <div class="popout-description-section">
+          <div class="popout-section-title">Sobre Mí</div>
+          <div class="popout-description-text style-muted"><i>Sin biografía en este perfil.</i></div>
+        </div>
+      `}
+
+      ${activitiesHtml ? `
+        <div class="popout-scrollable-activities">
+          ${activitiesHtml}
+        </div>
+      ` : ''}
+    </div>
+  `;
 }
 
 function switchChannel(id, name) {
@@ -419,6 +428,7 @@ function processMessage(data, type) {
   let nameToShow = data.nickname || data.username;
   let avatarUrl = data.avatar;
 
+  // PERSISTENCIA FIX: Si el autor es el bot de Kori o un WebUser, heredamos los datos del caché de Firebase vivos
   if (type === "web" || data.authorId === botId || data.username === "WebUser") {
     if (cachedKoriProfile) {
       nameToShow = cachedKoriProfile.nickname || cachedKoriProfile.username;
@@ -485,11 +495,13 @@ window.sendMessage = async function(){
   if(!text) return;
   clearUnreadDividers();
 
+  // Guardamos usando los metadatos del perfil dinámico cacheado para evitar pérdida en reinicios duros del chat
   await push(ref(db,"webMessages"), {
     text: text,
     time: Date.now(),
     username: "WebUser",
-    nickname: "Kori",
+    nickname: cachedKoriProfile ? (cachedKoriProfile.nickname || cachedKoriProfile.username) : "Kori",
+    avatar: cachedKoriProfile ? cachedKoriProfile.avatar : "",
     channelId: currentChannelId,
     guildId: currentServerId
   });
