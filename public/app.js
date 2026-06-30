@@ -222,7 +222,7 @@ function renderMembers(members) {
       
       let activitiesHtml = "";
 
-      // 1. Renderizar Spotify Estilo Premium primero si existe
+      // 1. Renderizar Spotify Estilo Premium
       if (m.spotify) {
         const coverImg = m.spotify.image ? `<img class="activity-img spotify-glow" src="${m.spotify.image}">` : `<div class="activity-img-placeholder spotify-bg">🎵</div>`;
         activitiesHtml += `
@@ -271,7 +271,7 @@ function renderMembers(members) {
         });
       }
 
-      // Fallback por si la base de datos antigua tiene una actividad simple en texto
+      // Fallback por si la base de datos tiene actividad simple de tipo texto antiguo
       if (m.activity && !m.spotify && (!m.activities || m.activities.length === 0)) {
         activitiesHtml += `
           <div class="activity-block">
@@ -295,7 +295,7 @@ function renderMembers(members) {
             <div class="popout-status-dot-overlay ${m.status}"></div>
           </div>
           
-          <!-- 💬 Globo de Estado Estilo Discord (Con límites estrictos) -->
+          <!-- 💬 Globo de Estado Estilo Discord (Con expansión en :hover) -->
           ${m.customStatus ? `
             <div class="popout-status-bubble">
               <div class="bubble-content">${m.customStatus}</div>
@@ -315,7 +315,12 @@ function renderMembers(members) {
               <div class="popout-section-title">Sobre Mí</div>
               <div class="popout-description-text">${m.aboutMe}</div>
             </div>
-          ` : ''}
+          ` : `
+            <div class="popout-description-section">
+              <div class="popout-section-title">Sobre Mí</div>
+              <div class="popout-description-text style-muted"><i>Sin biografía en este perfil.</i></div>
+            </div>
+          `}
 
           <!-- ⚡ Zona con scroll dedicada a Múltiples Actividades -->
           ${activitiesHtml ? `
