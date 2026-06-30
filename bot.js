@@ -25,7 +25,8 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildPresences,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates
   ]
 });
 
@@ -57,45 +58,75 @@ async function syncSingleMember(member) {
     let status = member.presence?.status || "offline";
     if (status === "invisible") status = "offline";
 
-    // Detectar Actividades Detalladas (Juegos y Spotify con autor/canción/portada)
-    let activityText = "";
+    let activitiesList = [];
     let spotifyDetails = null;
+    let customStatusText = "";
 
-    if (member.presence?.activities && member.presence.activities.length > 0) {
-      // Buscar si está escuchando Spotify específicamente
-      const spotifyAct = member.presence.activities.find(a => a.name === "Spotify");
-      
-      if (spotifyAct) {
-        let spotifyTrackImg = "";
-        if (spotifyAct.assets && spotifyAct.assets.largeImage) {
-          // Extraer la ID real de la portada de Spotify
-          const imgId = spotifyAct.assets.largeImage.replace("spotify:", "");
-          spotifyTrackImg = `https://i.scdn.co/image/${imgId}`;
-        }
-        
-        spotifyDetails = {
-          song: spotifyAct.details || "Canción desconocida",
-          artist: spotifyAct.state || "Artista desconocido",
-          album: spotifyAct.assets?.largeText || "",
-          image: spotifyTrackImg
-        };
-        activityText = `Escuchando Spotify`;
-      } else {
-        // Si es otro tipo de juego o actividad regular
-        const currentAct = member.presence.activities.find(a => a.type !== 4);
-        if (currentAct) {
-          const typeNames = ["Jugando a", "Transmitiendo", "Escuchando", "Viendo", "Compitiendo en"];
-          activityText = `${typeNames[currentAct.type] || "Jugando a"} ${currentAct.name}`;
-          if (currentAct.details) activityText += ` - ${currentAct.details}`;
-        }
-      }
+    // Capturar Estado de Voz Nativo
+    const voiceState = member.guild.voiceStates.cache.get(member.user.id);
+    if (voiceState && voiceState.channel) {
+      activitiesList.push({
+        type: "voice",
+        header: "EN CANAL DE VOZ",
+        name: voiceState.channel.name,
+        details: member.guild.name,
+        state: `🔊 Conectado ${voiceState.selfVideo ? "🎥 En Cámara" : ""}`
+      });
     }
 
-    const customStatusObj = member.presence?.activities.find(a => a.type === 4);
-    let customStatusText = "";
-    if (customStatusObj) {
-      const emojiPrefix = customStatusObj.emoji ? (customStatusObj.emoji.id ? `<img class="status-emoji" src="https://cdn.discordapp.com/emojis/${customStatusObj.emoji.id}.png">` : customStatusObj.emoji.name + " ") : "";
-      customStatusText = emojiPrefix + (customStatusObj.state || "");
+    // Procesar TODAS las actividades de Discord en paralelo
+    if (member.presence?.activities && member.presence.activities.length > 0) {
+      member.presence.activities.forEach(act => {
+        // 1. Estado Personalizado (Tipo 4)
+        if (act.type === 4) {
+          const emojiPrefix = act.emoji ? (act.emoji.id ? `<img class="status-emoji" src="https://cdn.discordapp.com/emojis/${act.emoji.id}.png">` : act.emoji.name + " ") : "";
+          customStatusText = emojiPrefix + (act.state || "");
+          return;
+        }
+
+        // 2. Spotify
+        if (act.name === "Spotify") {
+          let spotifyTrackImg = "";
+          if (act.assets && act.assets.largeImage) {
+            const imgId = act.assets.largeImage.replace("spotify:", "");
+            spotifyTrackImg = `https://i.scdn.co/image/${imgId}`;
+          }
+          spotifyDetails = {
+            song: act.details || "Canción desconocida",
+            artist: act.state || "Artista desconocido",
+            album: act.assets?.largeText || "",
+            image: spotifyTrackImg
+          };
+          return;
+        }
+
+        // 3. Actividades Generales (Juegos, Transmisiones, Watch Together / Actividades integradas)
+        const typeNames = ["JUGANDO A", "TRANSMITIENDO", "ESCUCHANDO A", "VIENDO", "COMPITIENDO EN", "COMPARTIENDO"];
+        let headerText = typeNames[act.type] || "ACTIVIDAD";
+        
+        // Detección especial de actividades integradas (como Watch Together, Gartic, etc.)
+        if (act.applicationId) {
+          headerText = "COMPARTIENDO ACTIVIDAD";
+        }
+
+        let actImg = "";
+        if (act.assets?.largeImage) {
+          if (act.assets.largeImage.startsWith("mp:external")) {
+            actImg = act.assets.largeImage.replace(/mp:external\/.*\/https\//, "https://");
+          } else if (act.applicationId) {
+            actImg = `https://cdn.discordapp.com/app-assets/${act.applicationId}/${act.assets.largeImage}.png`;
+          }
+        }
+
+        activitiesList.push({
+          type: "generic",
+          header: headerText,
+          name: act.name,
+          details: act.details || "",
+          state: act.state || "",
+          image: actImg
+        });
+      });
     }
 
     const memberData = {
@@ -104,10 +135,11 @@ async function syncSingleMember(member) {
       nickname: member.displayName,
       avatar: member.user.displayAvatarURL({ extension: "png", size: 128 }),
       bannerColor: userFull.hexAccentColor || "#5865f2",
+      aboutMe: userFull.aboutMe || "", // Captura de la biografía/descripción del usuario
       status: status,
       customStatus: customStatusText,
-      activity: activityText,
-      spotify: spotifyDetails, // Se acopla la info detallada al nodo
+      spotify: spotifyDetails,
+      activities: activitiesList, // Lista unificada de todo lo que está haciendo
       isBot: member.user.bot
     };
 
@@ -149,6 +181,10 @@ client.on("channelDelete", syncServers);
 client.on("channelUpdate", syncServers);
 
 client.on("presenceUpdate", (oldP, newP) => { if (newP?.member) syncSingleMember(newP.member); });
+client.on("voiceStateUpdate", (oldS, newS) => {
+  const member = newS.member || oldS.member;
+  if (member) syncSingleMember(member);
+});
 client.on("guildMemberAdd", syncSingleMember);
 client.on("guildMemberUpdate", syncSingleMember);
 client.on("guildMemberRemove", async (member) => {
