@@ -50,7 +50,6 @@ window.addEventListener("focus", () => {
   document.title = "KoriCord Futurist";
   clearUnreadDividers();
 });
-
 window.addEventListener("blur", () => { isWindowFocused = false; });
 
 function playNotificationSound() {
@@ -105,6 +104,7 @@ function initApp() {
 function renderServers() {
   const container = document.getElementById("guildsSidebar");
   container.innerHTML = "";
+
   Object.values(serversData).forEach((srv, idx) => {
     const wrap = document.createElement("div");
     wrap.className = `guild-icon-wrap ${currentServerId === srv.id || (!currentServerId && idx === 0) ? 'active' : ''}`;
@@ -141,6 +141,7 @@ function selectServer(serverId) {
   currentServerId = serverId;
   const srv = serversData[serverId];
   if (!srv) return;
+
   document.getElementById("serverTitle").innerText = srv.name;
   serverUnreadCounts[serverId] = 0;
   const srvBadge = document.getElementById(`server-badge-${serverId}`);
@@ -182,6 +183,7 @@ function selectServer(serverId) {
 }
 
 let cachedKoriProfile = null;
+
 function renderMembers(members) {
   const container = document.getElementById("membersList");
   container.innerHTML = "";
@@ -216,18 +218,16 @@ function renderMembers(members) {
     item.onclick = (e) => {
       e.stopPropagation();
       const rect = item.getBoundingClientRect();
-      popout.style.top = `${Math.min(rect.top - 10, window.innerHeight - 340)}px`;
+      popout.style.top = `${Math.min(rect.top - 10, window.innerHeight - 440)}px`;
       
-      // Contenedor acumulativo de actividades múltiples
       let activitiesHtml = "";
 
-      // 1. SECCIÓN SPOTIFY (Diseño Mejorado Estilo Discord Premium)
+      // 1. Renderizar Spotify Estilo Premium primero si existe
       if (m.spotify) {
-        const coverImg = m.spotify.image ?
-          `<img class="activity-img spotify-glow" src="${m.spotify.image}">` : `<div class="activity-img-placeholder spotify-bg">🎵</div>`;
+        const coverImg = m.spotify.image ? `<img class="activity-img spotify-glow" src="${m.spotify.image}">` : `<div class="activity-img-placeholder spotify-bg">🎵</div>`;
         activitiesHtml += `
           <div class="activity-block">
-            <div class="popout-section-title status-spotify">ESCUCHANDO SPOTIFY</div>
+            <div class="popout-section-title status-spotify">Escuchando Spotify</div>
             <div class="popout-activity-box">
               <div class="activity-img-wrap">${coverImg}</div>
               <div class="activity-info">
@@ -240,60 +240,26 @@ function renderMembers(members) {
         `;
       }
 
-      // 2. SECCIÓN DE LLAMADA O VOZ
-      if (m.voice || (m.activity && (m.activity.toLowerCase().includes("llamada") || m.activity.toLowerCase().includes("en voz")))) {
-        const voiceTitle = m.voice?.channelName || m.activity;
-        activitiesHtml += `
-          <div class="activity-block">
-            <div class="popout-section-title status-voice">EN LLAMADA DE VOZ</div>
-            <div class="popout-activity-box">
-              <div class="activity-img-wrap">
-                <div class="activity-img-placeholder voice-bg">🔊</div>
-              </div>
-              <div class="activity-info">
-                <div class="activity-title">${voiceTitle}</div>
-                <div class="activity-details style-muted">${m.voice?.serverName || 'Canal de voz activo'}</div>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-
-      // 3. SECCIÓN JUEGOS O ACTIVIDAD GENERAL (Soporta renderizar en paralelo a Spotify)
-      // Filtramos si la actividad ya fue mapeada arriba para no duplicar
-      if (m.activity && (!m.spotify || !m.activity.toLowerCase().includes("spotify")) && !m.activity.toLowerCase().includes("llamada") && !m.activity.toLowerCase().includes("en voz")) {
-        activitiesHtml += `
-          <div class="activity-block">
-            <div class="popout-section-title status-game">JUGANDO A</div>
-            <div class="popout-activity-box">
-              <div class="activity-img-wrap">
-                <div class="activity-img-placeholder game-bg">🎮</div>
-              </div>
-              <div class="activity-info">
-                <div class="activity-title">${m.activity}</div>
-                <div class="activity-details">Jugando ahora mismo</div>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-
-      // 4. NUEVO: Soporte si viene una lista nativa de múltiples actividades en un array m.activities
-      if (Array.isArray(m.activities)) {
+      // 2. Renderizar Lista acumulativa de múltiples actividades simultáneas
+      if (m.activities && Array.isArray(m.activities)) {
         m.activities.forEach(act => {
-          if(act.type === 'spotify') return; // Evitar duplicar si ya se manejó arriba
-          let icon = "🎮";
-          let badgeClass = "status-game";
           let bgClass = "game-bg";
-          if(act.type === 'voice') { icon = "🔊"; badgeClass = "status-voice"; bgClass = "voice-bg"; }
-          
+          let defaultIcon = "🎮";
+          let headingClass = "status-game";
+
+          if (act.type === "voice") {
+            bgClass = "voice-bg";
+            defaultIcon = "🔊";
+            headingClass = "status-voice";
+          }
+
+          const actImg = act.image ? `<img class="activity-img" src="${act.image}">` : `<div class="activity-img-placeholder ${bgClass}">${defaultIcon}</div>`;
+
           activitiesHtml += `
             <div class="activity-block">
-              <div class="popout-section-title ${badgeClass}">${act.header || 'ACTIVIDAD'}</div>
+              <div class="popout-section-title ${headingClass}">${act.header || 'JUGANDO A'}</div>
               <div class="popout-activity-box">
-                <div class="activity-img-wrap">
-                  ${act.image ? `<img class="activity-img" src="${act.image}">` : `<div class="activity-img-placeholder ${bgClass}">${icon}</div>`}
-                </div>
+                <div class="activity-img-wrap">${actImg}</div>
                 <div class="activity-info">
                   <div class="activity-title">${act.name}</div>
                   ${act.details ? `<div class="activity-details">${act.details}</div>` : ''}
@@ -305,23 +271,58 @@ function renderMembers(members) {
         });
       }
 
+      // Fallback por si la base de datos antigua tiene una actividad simple en texto
+      if (m.activity && !m.spotify && (!m.activities || m.activities.length === 0)) {
+        activitiesHtml += `
+          <div class="activity-block">
+            <div class="popout-section-title status-game">Actividad</div>
+            <div class="popout-activity-box">
+              <div class="activity-img-wrap"><div class="activity-img-placeholder game-bg">🎮</div></div>
+              <div class="activity-info">
+                <div class="activity-title">${m.activity}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
       popout.innerHTML = `
         <div class="popout-banner" style="background-color: ${m.bannerColor || '#5865f2'};"></div>
-        <div class="popout-avatar-wrap">
-          ${m.avatar ?
-            `<img class="popout-avatar" src="${m.avatar}">` : `<div class="popout-avatar">${m.nickname[0]}</div>`}
+        
+        <div class="popout-header-row">
+          <div class="popout-avatar-wrap">
+            ${m.avatar ? `<img class="popout-avatar" src="${m.avatar}">` : `<div class="popout-avatar">${m.nickname[0]}</div>`}
+            <div class="popout-status-dot-overlay ${m.status}"></div>
+          </div>
+          
+          <!-- 💬 Globo de Estado Estilo Discord (Con límites estrictos) -->
+          ${m.customStatus ? `
+            <div class="popout-status-bubble">
+              <div class="bubble-content">${m.customStatus}</div>
+            </div>
+          ` : ''}
         </div>
+
         <div class="popout-body">
           <div class="popout-names">
             <div class="popout-nick">${m.nickname || m.username}</div>
             <div class="popout-user">@${m.username}</div>
           </div>
-          ${m.customStatus ?
-            `<div><div class="popout-section-title">Estado Personalizado</div><div class="popout-text">${m.customStatus}</div></div>` : ''}
-          
-          <div class="popout-activities-wrapper">
-            ${activitiesHtml}
-          </div>
+
+          <!-- 📑 Descripción / Biografía del Usuario -->
+          ${m.aboutMe ? `
+            <div class="popout-description-section">
+              <div class="popout-section-title">Sobre Mí</div>
+              <div class="popout-description-text">${m.aboutMe}</div>
+            </div>
+          ` : ''}
+
+          <!-- ⚡ Zona con scroll dedicada a Múltiples Actividades -->
+          ${activitiesHtml ? `
+            <div class="popout-scrollable-activities">
+              ${activitiesHtml}
+            </div>
+          ` : ''}
         </div>
       `;
       popout.style.display = "flex";
@@ -334,6 +335,7 @@ function renderMembers(members) {
 function switchChannel(id, name) {
   currentChannelId = id;
   document.getElementById("currentChannelName").innerText = name;
+  
   document.querySelectorAll(".channel-btn").forEach(btn => {
     if(btn.innerText === name) btn.classList.add("active");
     else btn.classList.remove("active");
@@ -348,6 +350,7 @@ function switchChannel(id, name) {
   filterMessages();
 
   if (currentTypingListener) currentTypingListener();
+  
   currentTypingListener = onValue(ref(db, `typingStatus/${currentChannelId}`), (snap) => {
     const data = snap.val();
     const indicator = document.getElementById("typing");
@@ -410,6 +413,7 @@ function processMessage(data, type) {
 
   let nameToShow = data.nickname || data.username;
   let avatarUrl = data.avatar;
+
   if (type === "web" || data.authorId === botId || data.username === "WebUser") {
     if (cachedKoriProfile) {
       nameToShow = cachedKoriProfile.nickname || cachedKoriProfile.username;
@@ -420,9 +424,9 @@ function processMessage(data, type) {
   }
 
   const avatarHtml = (avatarUrl && avatarUrl.startsWith('http')) 
-    ?
-    `<img class="avatar" src="${avatarUrl}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'avatar\\'>${nameToShow[0]}</div>';">`
+    ? `<img class="avatar" src="${avatarUrl}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'avatar\\'>${nameToShow[0]}</div>';">`
     : `<div class="avatar">${nameToShow ? nameToShow[0].toUpperCase() : "K"}</div>`;
+
   const timeStr = new Date(msgTime).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
   let attachmentsHtml = "";
@@ -443,12 +447,12 @@ function processMessage(data, type) {
         <span class="name">${nameToShow}</span>
         <span class="time">${timeStr}</span>
       </div>
-      ${data.username && data.username !== "WebUser" ?
-        `<div class="username">@${data.username}</div>` : ''}
+      ${data.username && data.username !== "WebUser" ? `<div class="username">@${data.username}</div>` : ''}
       <div class="text">${data.text}</div>
       ${attachmentsHtml}
     </div>
   `;
+
   const container = document.getElementById("messages");
   const children = Array.from(container.children);
   const nextSibling = children.find(child => parseInt(child.dataset.time) > msgTime);
@@ -475,6 +479,7 @@ window.sendMessage = async function(){
   const text = document.getElementById("msg").value;
   if(!text) return;
   clearUnreadDividers();
+
   await push(ref(db,"webMessages"), {
     text: text,
     time: Date.now(),
@@ -483,6 +488,7 @@ window.sendMessage = async function(){
     channelId: currentChannelId,
     guildId: currentServerId
   });
+
   document.getElementById("msg").value="";
 };
 
