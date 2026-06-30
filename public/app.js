@@ -295,7 +295,7 @@ function renderMembers(members) {
             <div class="popout-status-dot-overlay ${m.status}"></div>
           </div>
           
-          <!-- 💬 Globo de Estado Estilo Discord (Con expansión en :hover) -->
+          <!-- 💬 Globo de Estado Estilo Discord (Con expansión dinámica limpia en :hover) -->
           ${m.customStatus ? `
             <div class="popout-status-bubble">
               <div class="bubble-content">${m.customStatus}</div>
